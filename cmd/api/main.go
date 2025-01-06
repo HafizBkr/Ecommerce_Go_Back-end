@@ -14,16 +14,17 @@ import (
 )
 
 func main() {
-    err := godotenv.Load("../../.env")
+	err := godotenv.Load("../../.env")
 	if err != nil {
 		log.Fatal("Erreur lors du chargement du fichier .env")
 	}
-    
+
 	DATABASE_URL := os.Getenv("DNS_LINK")
 	if DATABASE_URL == "" {
 		log.Fatal("La chaîne de connexion à la base de données est manquante.")
 	}
 	config.InitDatabase(DATABASE_URL)
+
 	r := chi.NewRouter()
 	// Utiliser les middleware pour la gestion des requêtes
 	r.Use(middleware.Logger)     // Journalisation des requêtes
@@ -44,6 +45,7 @@ func main() {
 
 	// Démarrer le serveur HTTP
 	log.Println("Démarrage du serveur sur le port 8080...")
+	err = http.ListenAndServe(":8080", r)
 	if err != nil {
 		log.Fatalf("Erreur lors du démarrage du serveur : %v", err)
 	}
