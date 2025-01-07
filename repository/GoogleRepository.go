@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"ecommerce-api/internal/domain/models"
+	"ecommerce-api/models"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -31,7 +31,7 @@ func (repo *UserRepository) CreateUser(user models.User) error {
 	_, err := repo.db.Exec(
 		query,
 		user.Email,
-		user.PasswordHash,
+		user.PasswordHash, // Ajouter un mot de passe par défaut ou gérer autrement
 		user.FirstName,
 		user.LastName,
 		user.IsAdmin,
@@ -56,35 +56,6 @@ func (repo *UserRepository) GetUserByEmail(email string) (*models.User, error) {
 		return nil, err
 	}
 	return &user, nil
-}
-
-// UpdateLastLogin met à jour la date de dernière connexion d'un utilisateur
-func (repo *UserRepository) UpdateLastLogin(email string) error {
-	query := `
-		UPDATE users
-		SET last_login = $1, updated_at = $2
-		WHERE email = $3
-	`
-	_, err := repo.db.Exec(query, time.Now(), time.Now(), email)
-	return err
-}
-
-// SaveUserProfile met à jour les informations du profil utilisateur
-func (repo *UserRepository) SaveUserProfile(email, phoneNumber, city, country string) error {
-	query := `
-		UPDATE users
-		SET phone_number = $1, residence_city = $2, residence_country = $3, updated_at = NOW()
-		WHERE email = $4
-	`
-	_, err := repo.db.Exec(query, phoneNumber, city, country, email)
-	return err
-}
-
-// DeleteUser supprime un utilisateur par son ID
-func (repo *UserRepository) DeleteUser(userID int) error {
-	query := `DELETE FROM users WHERE id = $1`
-	_, err := repo.db.Exec(query, userID)
-	return err
 }
 
 // UpdateUser met à jour les informations utilisateur
@@ -121,13 +92,18 @@ func (repo *UserRepository) UpdateUser(user models.User) error {
 	return err
 }
 
-// GetAllUsers récupère tous les utilisateurs
-func (repo *UserRepository) GetAllUsers() ([]models.User, error) {
-	var users []models.User
-	query := `SELECT * FROM users`
-	err := repo.db.Select(&users, query)
-	if err != nil {
-		return nil, err
-	}
-	return users, nil
+// SaveUserProfile met à jour les informations du profil utilisateur
+func (repo *UserRepository) SaveUserProfile(email, address, phoneNumber, city, country string) error {
+	query := `
+		UPDATE users
+		SET 
+			address = $1,
+			phone_number = $2, 
+			residence_city = $3, 
+			residence_country = $4, 
+			updated_at = NOW()
+		WHERE email = $5
+	`
+	_, err := repo.db.Exec(query, address, phoneNumber, city, country, email)
+	return err
 }
