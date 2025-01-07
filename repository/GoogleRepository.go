@@ -1,7 +1,9 @@
 package repository
 
 import (
+	"database/sql"
 	"ecommerce-api/models"
+	"fmt"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -48,48 +50,72 @@ func (repo *UserRepository) CreateUser(user models.User) error {
 }
 
 // GetUserByEmail récupère un utilisateur par son email
-func (repo *UserRepository) GetUserByEmail(email string) (*models.User, error) {
-	var user models.User
-	query := `SELECT * FROM users WHERE email = $1`
-	err := repo.db.Get(&user, query, email)
-	if err != nil {
-		return nil, err
-	}
-	return &user, nil
+func (r *UserRepository) GetUserByEmail(email string) (*models.User, error) {
+    query := `
+        SELECT id, email, first_name, last_name, is_admin, points, 
+               COALESCE(last_login, NOW()), status, created_at, updated_at,
+               COALESCE(address, ''), COALESCE(phone_number, ''), 
+               COALESCE(residence_city, ''), COALESCE(residence_country, '')
+        FROM users 
+        WHERE email = $1`
+
+    user := &models.User{}
+    err := r.db.QueryRow(query, email).Scan(
+        &user.ID,
+        &user.Email,
+        &user.FirstName,
+        &user.LastName,
+        &user.IsAdmin,
+        &user.Points,
+        &user.LastLogin,
+        &user.Status,
+        &user.CreatedAt,
+        &user.UpdatedAt,
+        &user.Address,
+        &user.PhoneNumber,
+        &user.ResidenceCity,
+        &user.ResidenceCountry,
+    )
+    if err == sql.ErrNoRows {
+        return nil, fmt.Errorf("user not found")
+    }
+    if err != nil {
+        return nil, err
+    }
+    return user, nil
 }
 
+
 // UpdateUser met à jour les informations utilisateur
-func (repo *UserRepository) UpdateUser(user models.User) error {
-	query := `
-		UPDATE users
-		SET 
-			first_name = $1, 
-			last_name = $2, 
-			is_admin = $3, 
-			points = $4, 
-			status = $5, 
-			address = $6, 
-			phone_number = $7, 
-			residence_city = $8, 
-			residence_country = $9, 
-			updated_at = $10
-		WHERE id = $11
-	`
-	_, err := repo.db.Exec(
-		query,
-		user.FirstName,
-		user.LastName,
-		user.IsAdmin,
-		user.Points,
-		user.Status,
-		user.Address,
-		user.PhoneNumber,
-		user.ResidenceCity,
-		user.ResidenceCountry,
-		time.Now(),
-		user.ID,
-	)
-	return err
+func (r *UserRepository) UpdateUser(user models.User) error {
+    query := `
+        UPDATE users 
+        SET 
+            first_name = $1,
+            last_name = $2,
+            address = $3,
+            phone_number = $4,
+            residence_city = $5,
+            residence_country = $6,
+            updated_at = NOW()
+        WHERE email = $7
+        RETURNING id`
+
+    err := r.db.QueryRow(
+        query,
+        user.FirstName,
+        user.LastName,
+        user.Address,
+        user.PhoneNumber,
+        user.ResidenceCity,
+        user.ResidenceCountry,
+        user.Email,
+    ).Scan(&user.ID)
+
+    if err != nil {
+        return fmt.Errorf("error updating user: %v", err)
+    }
+    return nil
 }
 
 // SaveUserProfile met à jour les informations du profil utilisateur

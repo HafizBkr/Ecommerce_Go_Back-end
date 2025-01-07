@@ -107,58 +107,82 @@ type UpdateProfileRequest struct {
 
 // HandleCompleteProfile handles profile completion or updates
 func (h *GoogleAuthHandler) HandleCompleteProfile(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	authHeader := r.Header.Get("Authorization")
-	if authHeader == "" {
-		http.Error(w, "Authorization header is missing", http.StatusUnauthorized)
-		return
-	}
-	token := strings.TrimPrefix(authHeader, "Bearer ")
+    ctx := r.Context()
+    authHeader := r.Header.Get("Authorization")
+    if authHeader == "" {
+        http.Error(w, "Authorization header is missing", http.StatusUnauthorized)
+        return
+    }
+    token := strings.TrimPrefix(authHeader, "Bearer ")
 
-	claims, err := ValidateGoogleToken(ctx, token)
-	if err != nil {
-		http.Error(w, "Invalid Google token", http.StatusUnauthorized)
-		return
-	}
+    claims, err := ValidateGoogleToken(ctx, token)
+    if err != nil {
+        http.Error(w, "Invalid Google token", http.StatusUnauthorized)
+        return
+    }
 
-	email := claims["email"].(string)
-	firstName := claims["given_name"].(string)
-	lastName := claims["family_name"].(string)
+    email := claims["email"].(string)
+    firstName := claims["given_name"].(string)
+    lastName := claims["family_name"].(string)
 
-	user, err := h.repo.GetUserByEmail(email)
-	if err != nil {
-		user = &models.User{
-			Email:     email,
-			FirstName: firstName,
-			LastName:  lastName,
-			Status:    "active",
-		}
-		if err := h.repo.CreateUser(*user); err != nil {
-			http.Error(w, "Failed to create user", http.StatusInternalServerError)
-			return
-		}
-	}
+    // Debug log
+    fmt.Printf("Processing update for email: %s\n", email)
 
-	var payload UpdateProfileRequest
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		fmt.Println("Error decoding payload:", err)
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
-		return
-	}
-	fmt.Printf("Received payload: %+v\n", payload)
+    user, err := h.repo.GetUserByEmail(email)
+    if err != nil {
+        fmt.Printf("Creating new user for email: %s\n", email)
+        user = &models.User{
+            Email:     email,
+            FirstName: firstName,
+            LastName:  lastName,
+            Status:    "active",
+        }
+        if err := h.repo.CreateUser(*user); err != nil {
+            fmt.Printf("Error creating user: %v\n", err)
+            http.Error(w, "Failed to create user", http.StatusInternalServerError)
+            return
+        }
+    }
 
-	// Update user information
-	user.Address = payload.Address
-	user.PhoneNumber = payload.PhoneNumber
-	user.ResidenceCity = payload.ResidenceCity
-	user.ResidenceCountry = payload.ResidenceCountry
+    var payload UpdateProfileRequest
+    if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+        fmt.Printf("Error decoding payload: %v\n", err)
+        http.Error(w, "Invalid request payload", http.StatusBadRequest)
+        return
+    }
 
-	if err := h.repo.UpdateUser(*user); err != nil {
-		fmt.Println("Error updating user:", err)
-		http.Error(w, "Failed to update profile", http.StatusInternalServerError)
-		return
-	}
+    // Debug log before update
+    fmt.Printf("Before update - User: %+v\n", user)
+    fmt.Printf("Update payload: %+v\n", payload)
 
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"message": "Profile updated successfully"})
+    // Update user information
+    user.Address = payload.Address
+    user.PhoneNumber = payload.PhoneNumber
+    user.ResidenceCity = payload.ResidenceCity
+    user.ResidenceCountry = payload.ResidenceCountry
+
+    // Debug log after setting new values
+    fmt.Printf("After setting values - User: %+v\n", user)
+
+    if err := h.repo.UpdateUser(*user); err != nil {
+        fmt.Printf("Error updating user: %v\n", err)
+        http.Error(w, "Failed to update profile", http.StatusInternalServerError)
+        return
+    }
+
+    // Verify the update
+    updatedUser, err := h.repo.GetUserByEmail(email)
+    if err != nil {
+        fmt.Printf("Error verifying update: %v\n", err)
+    } else {
+        fmt.Printf("After update in DB - User: %+v\n", updatedUser)
+    }
+
+    w.WriteHeader(http.StatusOK)
+    json.NewEncoder(w).Encode(map[string]string{
+        "message": "Profile updated successfully",
+        "status": "success",
+        "updated_fields": fmt.Sprintf("address: %s, phone: %s, city: %s, country: %s",
+            user.Address, user.PhoneNumber, user.ResidenceCity, user.ResidenceCountry),
+    })
 }
