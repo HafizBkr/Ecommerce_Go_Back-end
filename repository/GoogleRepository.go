@@ -24,7 +24,7 @@ func (r *UserRepository) GetUserByGoogleID(googleID string) (*models.User, error
                COALESCE(last_login, NOW()), status, created_at, updated_at,
                COALESCE(address, ''), COALESCE(phone_number, ''), 
                COALESCE(residence_city, ''), COALESCE(residence_country, ''),
-               google_id
+               google_id, COALESCE(profile_picture, '')
         FROM users 
         WHERE google_id = $1`
 
@@ -45,14 +45,12 @@ func (r *UserRepository) GetUserByGoogleID(googleID string) (*models.User, error
         &user.ResidenceCity,
         &user.ResidenceCountry,
         &user.GoogleID,
+        &user.ProfilePicture,
     )
     if err == sql.ErrNoRows {
         return nil, fmt.Errorf("user not found")
     }
-    if err != nil {
-        return nil, err
-    }
-    return user, nil
+    return user, err
 }
 // CreateUser insère un nouvel utilisateur dans la base de données
 // CreateUser mise à jour pour inclure GoogleID
@@ -61,16 +59,16 @@ func (repo *UserRepository) CreateUser(user models.User) error {
         INSERT INTO users (
             email, password_hash, first_name, last_name, is_admin, points, 
             status, created_at, updated_at, address, phone_number, 
-            residence_city, residence_country, google_id
+            residence_city, residence_country, google_id, profile_picture
         )
         VALUES (
-            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
+            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
         )
     `
     _, err := repo.db.Exec(
         query,
         user.Email,
-        user.PasswordHash,
+        user.PasswordHash, // Assurez-vous d'ajouter le mot de passe si nécessaire
         user.FirstName,
         user.LastName,
         user.IsAdmin,
@@ -83,9 +81,11 @@ func (repo *UserRepository) CreateUser(user models.User) error {
         user.ResidenceCity,
         user.ResidenceCountry,
         user.GoogleID,
+        user.ProfilePicture, // Ajout de la photo de profil
     )
     return err
 }
+
 
 // GetUserByEmail récupère un utilisateur par son email
 func (r *UserRepository) GetUserByEmail(email string) (*models.User, error) {
@@ -94,7 +94,7 @@ func (r *UserRepository) GetUserByEmail(email string) (*models.User, error) {
                COALESCE(last_login, NOW()), status, created_at, updated_at,
                COALESCE(address, ''), COALESCE(phone_number, ''), 
                COALESCE(residence_city, ''), COALESCE(residence_country, ''),
-               COALESCE(google_id, '')
+               COALESCE(google_id, ''),COALESCE(profile_picture, '')
         FROM users 
         WHERE email = $1`
 
@@ -115,6 +115,7 @@ func (r *UserRepository) GetUserByEmail(email string) (*models.User, error) {
         &user.ResidenceCity,
         &user.ResidenceCountry,
         &user.GoogleID,
+        &user.ProfilePicture,
     )
     if err == sql.ErrNoRows {
         return nil, fmt.Errorf("user not found")
@@ -183,8 +184,8 @@ func (r *UserRepository) GetUserByID(userID string) (*models.User, error) {
         SELECT id, email, first_name, last_name, is_admin, points, 
                COALESCE(last_login, NOW()), status, created_at, updated_at,
                COALESCE(address, ''), COALESCE(phone_number, ''), 
-               COALESCE(residence_city, ''), COALESCE(residence_country, ''),
-               google_id
+               COALESCE(residence_city, ''), COALESCE(residence_country, ''),COALESCE(profile_picture, '')
+               google_id 
         FROM users 
         WHERE id = $1`
 
@@ -205,6 +206,7 @@ func (r *UserRepository) GetUserByID(userID string) (*models.User, error) {
 		&user.ResidenceCity,
 		&user.ResidenceCountry,
 		&user.GoogleID,
+        &user.ProfilePicture,
 	)
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("user not found")

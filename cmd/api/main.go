@@ -74,7 +74,6 @@ func main() {
 		r.Use(googleAuthMiddleware) // Appliquer le middleware d'authentification
 		r.Post("/", authHandler.HandleCompleteProfile) // Associer la méthode POST à la fonction de gestion
 	})
-
 	r.Route("/user/info", func(r chi.Router) {
 		r.Use(authMiddleware) // Appliquer le middleware d'authentification
 		r.Get("/", authHandler.GetUserHandler) // Lier le gestionnaire pour récupérer les infos de l'utilisateur

@@ -21,4 +21,5 @@ type User struct {
     PhoneNumber      string    `json:"phone_number" db:"phone_number"`
     ResidenceCity    string    `json:"residence_city" db:"residence_city"`
     ResidenceCountry string    `json:"residence_country" db:"residence_country"`
+    ProfilePicture   string    `json:"profile_picture" db:"profile_picture"`
 }
