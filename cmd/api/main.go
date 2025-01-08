@@ -1,10 +1,11 @@
 package main
 
 import (
+	"ecommerce-api/admin"
 	"ecommerce-api/config"
 	"ecommerce-api/googleauth"
+	middlewares "ecommerce-api/middleware"
 	"ecommerce-api/repository"
-	"ecommerce-api/middleware"
 	"log"
 	"net"
 	"net/http"
@@ -65,18 +66,25 @@ func main() {
 
 	// Initialisation du middleware GoogleAuth et du gestionnaire
 	googleAuthMiddleware := middlewares.GoogleAuthMiddleware
-	authMiddleware :=middlewares.AuthMiddleware
+	authMiddleware := middlewares.AuthMiddleware
+	// AdminMiddleware := admin.AdminAuthMiddleware
 	userRepo := repository.NewUserRepository(config.DB)
 	authHandler := googleauth.NewGoogleAuthHandler(userRepo)
-
+	adminRepo := admin.NewAdminRepository(config.DB)
+	adminHandler := admin.NewAdminHandler(adminRepo)
 	// Appliquer le middleware sur l'endpoint "/complete-profile"
 	r.Route("/complete-profile", func(r chi.Router) {
-		r.Use(googleAuthMiddleware) // Appliquer le middleware d'authentification
+		r.Use(googleAuthMiddleware)                    // Appliquer le middleware d'authentification
 		r.Post("/", authHandler.HandleCompleteProfile) // Associer la méthode POST à la fonction de gestion
 	})
 	r.Route("/user/info", func(r chi.Router) {
-		r.Use(authMiddleware) // Appliquer le middleware d'authentification
+		r.Use(authMiddleware)                  // Appliquer le middleware d'authentification
 		r.Get("/", authHandler.GetUserHandler) // Lier le gestionnaire pour récupérer les infos de l'utilisateur
+	})
+	
+	r.Route("/admin", func(r chi.Router) {
+		r.Post("/register", adminHandler.HandleAdminRegister)
+		r.Post("/login", adminHandler.HandleAdminLogin)
 	})
 
 	// Authentification Google - routes de callback
