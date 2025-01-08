@@ -175,3 +175,43 @@ func (repo *UserRepository) SaveUserProfile(email, address, phoneNumber, city, c
 	_, err := repo.db.Exec(query, address, phoneNumber, city, country, email)
 	return err
 }
+
+// GetUserByID récupère un utilisateur par son ID
+// GetUserByID récupère un utilisateur par son ID
+func (r *UserRepository) GetUserByID(userID string) (*models.User, error) {
+	query := `
+        SELECT id, email, first_name, last_name, is_admin, points, 
+               COALESCE(last_login, NOW()), status, created_at, updated_at,
+               COALESCE(address, ''), COALESCE(phone_number, ''), 
+               COALESCE(residence_city, ''), COALESCE(residence_country, ''),
+               google_id
+        FROM users 
+        WHERE id = $1`
+
+	user := &models.User{}
+	err := r.db.QueryRow(query, userID).Scan(
+		&user.ID,
+		&user.Email,
+		&user.FirstName,
+		&user.LastName,
+		&user.IsAdmin,
+		&user.Points,
+		&user.LastLogin,
+		&user.Status,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+		&user.Address,
+		&user.PhoneNumber,
+		&user.ResidenceCity,
+		&user.ResidenceCountry,
+		&user.GoogleID,
+	)
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("user not found")
+	}
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+

@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"strings"
-
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/idtoken"
@@ -42,6 +41,7 @@ func HandleOAuthRedirect(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleAuthCallback handles the callback from Google OAuth2
+// HandleAuthCallback handles the callback from Google OAuth2
 func HandleAuthCallback(w http.ResponseWriter, r *http.Request) {
 	code := r.URL.Query().Get("code")
 	if code == "" {
@@ -72,7 +72,7 @@ func HandleAuthCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Print the ID token
+	// Afficher l'ID token dans le terminal
 	fmt.Println("ID Token:", idToken)
 
 	claims, err := ValidateGoogleToken(context.Background(), idToken)
@@ -83,8 +83,30 @@ func HandleAuthCallback(w http.ResponseWriter, r *http.Request) {
 
 	email := claims["email"].(string)
 	name := claims["name"].(string)
+	firstName := claims["given_name"].(string)
 
-	fmt.Fprintf(w, "Bienvenue %s (%s) !", name, email)
+	// Ajout du Google ID si nécessaire
+	googleID := claims["sub"].(string)
+
+	// Générez un JWT pour l'utilisateur
+	jwtToken, err := GenerateJWT(googleID, email)
+	if err != nil {
+		http.Error(w, "Failed to generate JWT token", http.StatusInternalServerError)
+		return
+	}
+
+	// Réponse avec succès
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{
+		"message":    "Authentication successful",
+		"status":     "success",
+		"email":      email,
+		"name":       name,
+		"first_name": firstName,
+		"google_id":  googleID,
+		"jwt_token":  jwtToken, // Ajouter le JWT dans la réponse
+	})
 }
 
 // ValidateGoogleToken validates the ID token from Google
@@ -97,6 +119,7 @@ func ValidateGoogleToken(ctx context.Context, token string) (map[string]interfac
 
 	return payload.Claims, nil
 }
+
 
 type UpdateProfileRequest struct {
 	Address          string `json:"address"`
@@ -167,18 +190,72 @@ func (h *GoogleAuthHandler) HandleCompleteProfile(w http.ResponseWriter, r *http
     user.ResidenceCity = payload.ResidenceCity
     user.ResidenceCountry = payload.ResidenceCountry
 
+    // Mettre à jour le profil utilisateur dans la base de données
     if err := h.repo.UpdateUser(*user); err != nil {
         fmt.Printf("Error updating user: %v\n", err)
         http.Error(w, "Failed to update profile", http.StatusInternalServerError)
         return
     }
 
+
+
+    // Répondre avec un message de succès et le JWT
     w.WriteHeader(http.StatusOK)
     json.NewEncoder(w).Encode(map[string]string{
         "message": "Profile updated successfully",
-        "status": "success",
+        "status":  "success",
         "google_id": googleID,
         "updated_fields": fmt.Sprintf("address: %s, phone: %s, city: %s, country: %s",
-            user.Address, user.PhoneNumber, user.ResidenceCity, user.ResidenceCountry),
+            user.Address, user.PhoneNumber, user.ResidenceCity, user.ResidenceCountry),  // Ajouter le JWT dans la réponse
     })
+}
+
+
+// GetUserHandler retrieves a user by their Google ID or email
+func (h *GoogleAuthHandler) GetUserHandler(w http.ResponseWriter, r *http.Request) {
+	// Récupérer le token Bearer du header Authorization
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "Authorization header is missing", http.StatusUnauthorized)
+		return
+	}
+	token := strings.TrimPrefix(authHeader, "Bearer ")
+
+	// Valider le token JWT et récupérer les claims
+	claims, err := ValidateJWTToken(token, "HDBCSOAVNOAHBVIJVNYWUONCPOIEUIBVE") // Assure-toi d'utiliser la clé secrète appropriée
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Invalid JWT token: %v", err), http.StatusUnauthorized)
+		return
+	}
+
+	// Extraire le userID et l'email depuis les claims
+	userID, ok := claims["user_id"].(string)
+	if !ok || userID == "" {
+		http.Error(w, "User ID is missing in the token", http.StatusBadRequest)
+		return
+	}
+
+	email, ok := claims["email"].(string)
+	if !ok || email == "" {
+		http.Error(w, "Email is missing in the token", http.StatusBadRequest)
+		return
+	}
+
+	// Chercher l'utilisateur dans la base de données par userID
+	user, err := h.repo.GetUserByID(userID)
+	if err != nil {
+		// Si l'utilisateur n'est pas trouvé par ID, chercher par email
+		user, err = h.repo.GetUserByEmail(email)
+		if err != nil {
+			http.Error(w, "User not found", http.StatusNotFound)
+			return
+		}
+	}
+
+	// Répondre avec les données de l'utilisateur
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(user); err != nil {
+		http.Error(w, fmt.Sprintf("Error encoding user data: %v", err), http.StatusInternalServerError)
+	}
 }
