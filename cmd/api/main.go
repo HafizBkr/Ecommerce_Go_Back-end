@@ -2,6 +2,7 @@ package main
 
 import (
 	"ecommerce-api/admin"
+	"ecommerce-api/categories"
 	"ecommerce-api/config"
 	"ecommerce-api/googleauth"
 	middlewares "ecommerce-api/middleware"
@@ -67,29 +68,45 @@ func main() {
 	// Initialisation du middleware GoogleAuth et du gestionnaire
 	googleAuthMiddleware := middlewares.GoogleAuthMiddleware
 	authMiddleware := middlewares.AuthMiddleware
+	AdminMiddleware := admin.AdminAuthMiddleware
 	// AdminMiddleware := admin.AdminAuthMiddleware
 	userRepo := repository.NewUserRepository(config.DB)
 	authHandler := googleauth.NewGoogleAuthHandler(userRepo)
 	adminRepo := admin.NewAdminRepository(config.DB)
 	adminHandler := admin.NewAdminHandler(adminRepo)
+	categoryRepo := categories.NewCategoryRepository(config.DB)
+	categoryHandler :=categories.NewCategoryHandler(categoryRepo)
 	// Appliquer le middleware sur l'endpoint "/complete-profile"
+	// Authentification Google - routes de callback
+	r.Get("/oauth-test", googleauth.HandleOAuthRedirect)
+	r.Get("/auth/callback", googleauth.HandleAuthCallback)
+	//Route pour completer le profile du user classique
 	r.Route("/complete-profile", func(r chi.Router) {
 		r.Use(googleAuthMiddleware)                    // Appliquer le middleware d'authentification
 		r.Post("/", authHandler.HandleCompleteProfile) // Associer la méthode POST à la fonction de gestion
 	})
+	//Route pour recuperer les info du user
 	r.Route("/user/info", func(r chi.Router) {
 		r.Use(authMiddleware)                  // Appliquer le middleware d'authentification
 		r.Get("/", authHandler.GetUserHandler) // Lier le gestionnaire pour récupérer les infos de l'utilisateur
 	})
+	//Route pour gerer l'authnetification de l'admin
 	
 	r.Route("/admin", func(r chi.Router) {
 		r.Post("/register", adminHandler.HandleAdminRegister)
 		r.Post("/login", adminHandler.HandleAdminLogin)
 	})
 
-	// Authentification Google - routes de callback
-	r.Get("/oauth-test", googleauth.HandleOAuthRedirect)
-	r.Get("/auth/callback", googleauth.HandleAuthCallback)
+	//Route pour cree les categorie Uniquement pour l'admin
+	r.Route("/categories", func(r chi.Router) {
+		r.Use(AdminMiddleware) // Authentification pour les administrateurs
+		r.Post("/", categoryHandler.HandleCreateCategory)
+		r.Put("/{id}", categoryHandler.HandleUpdateCategory)
+		r.Delete("/{id}", categoryHandler.HandleDeleteCategory)
+	})
+
+	r.Get("/categories/{id}", categoryHandler.HandleGetCategory)
+	r.Get("/categories", categoryHandler.HandleGetAllCategories)
 
 	// Démarrage du serveur
 	server := http.Server{
