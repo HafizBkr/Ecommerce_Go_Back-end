@@ -99,14 +99,12 @@ func main() {
 
 	//Route pour cree les categorie Uniquement pour l'admin
 	r.Route("/categories", func(r chi.Router) {
-		r.Use(AdminMiddleware) // Authentification pour les administrateurs
+		r.Use(AdminMiddleware)
 		r.Post("/", categoryHandler.HandleCreateCategory)
-		r.Put("/{id}", categoryHandler.HandleUpdateCategory)
-		r.Delete("/{id}", categoryHandler.HandleDeleteCategory)
-	})
 
-	r.Get("/categories/{id}", categoryHandler.HandleGetCategory)
-	r.Get("/categories", categoryHandler.HandleGetAllCategories)
+	})
+	r.Get("/catego", categoryHandler.HandleGetAllCategories)
+
 
 	// Démarrage du serveur
 	server := http.Server{
