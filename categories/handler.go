@@ -101,17 +101,41 @@ func (h *CategoryHandler) HandleUpdateCategory(w http.ResponseWriter, r *http.Re
         return
     }
     
+    // Vérification de l'existence de la catégorie
+    existingCategory, err := h.repo.GetCategoryByID(id)
+    if err != nil {
+        http.Error(w, fmt.Sprintf("Catégorie non trouvée: %v", err), http.StatusNotFound)
+        return
+    }
+    
+    if existingCategory == nil {
+        http.Error(w, "Catégorie non trouvée", http.StatusNotFound)
+        return
+    }
+    
     // Décodage du corps de la requête
-    var category models.Category
-    if err := json.NewDecoder(r.Body).Decode(&category); err != nil {
+    var updatedCategory models.Category
+    if err := json.NewDecoder(r.Body).Decode(&updatedCategory); err != nil {
         http.Error(w, "Requête invalide", http.StatusBadRequest)
         return
     }
     
-    // Mise à jour de l'ID
-    category.ID = id
+    // Mise à jour de l'ID et conservation des champs non modifiés
+    updatedCategory.ID = id
     
-    if err := h.repo.UpdateCategory(category); err != nil {
+    // Si certains champs sont vides dans la requête, on garde les valeurs existantes
+    if updatedCategory.Nom == "" {
+        updatedCategory.Nom = existingCategory.Nom
+    }
+    if updatedCategory.NombreProduits == 0 {
+        updatedCategory.NombreProduits = existingCategory.NombreProduits
+    }
+    if updatedCategory.Statut == "" {
+        updatedCategory.Statut = existingCategory.Statut
+    }
+    
+    // Exécution de la mise à jour
+    if err := h.repo.UpdateCategory(updatedCategory); err != nil {
         http.Error(w, fmt.Sprintf("Échec de la mise à jour : %v", err), http.StatusInternalServerError)
         return
     }
