@@ -52,9 +52,9 @@ func (repo *CategoryRepository) GetCategoryByID(id string) (*models.Category, er
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("Aucune catégorie trouvée avec l'ID %s", id)
+			return nil, fmt.Errorf("aucune catégorie trouvée avec l'ID %s", id)
 		}
-		return nil, fmt.Errorf("Erreur lors de la récupération de la catégorie : %v", err)
+		return nil, fmt.Errorf("erreur lors de la récupération de la catégorie : %v", err)
 	}
 	return &category, nil
 }
