@@ -4,6 +4,7 @@ import (
 	"ecommerce-api/admin"
 	"ecommerce-api/categories"
 	"ecommerce-api/config"
+	events_category "ecommerce-api/events_categories"
 	"ecommerce-api/googleauth"
 	middlewares "ecommerce-api/middleware"
 	"ecommerce-api/products"
@@ -78,6 +79,8 @@ func main() {
 	categoryHandler := categories.NewCategoryHandler(categoryRepo)
 	productRepo := products.NewProductRepository(config.DB)
 	productHandler := products.NewProductHandler(productRepo)
+	eventCategoriesRepo :=events_category.NewEventCategoryRepository(config.DB)
+	eventCategoriesHandler:=events_category.NewEventCategoryHandler(eventCategoriesRepo)
 
 	// Appliquer le middleware sur l'endpoint "/complete-profile"
 	// Authentification Google - routes de callback
@@ -119,6 +122,15 @@ func main() {
 		r.Get("/{id}", productHandler.HandleGetProductByID)
 		r.Get("/", productHandler.HandleGetAllProducts)
 		r.Get("/by-category/{categoryID}", productHandler.HandleGetProductsByCategory)
+	})
+	r.Route("/event-categories", func(r chi.Router) {
+		r.With(AdminMiddleware).Route("/", func(r chi.Router) {
+			r.Post("/", eventCategoriesHandler.HandleCreateEventCategory)
+			r.Put("/{id}", eventCategoriesHandler.HandleUpdateEventCategory)
+			r.Delete("/{id}", eventCategoriesHandler.HandleDeleteEventCategory)
+		})
+		r.Get("/", eventCategoriesHandler.HandleGetAllEventCategories)
+		r.Get("/{id}", eventCategoriesHandler.HandleGetEventCategoryByID)
 	})
 	// Démarrage du serveur
 	server := http.Server{
