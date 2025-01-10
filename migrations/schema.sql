@@ -32,17 +32,43 @@ CREATE TABLE categories (
 );
 
 -- Table Produit
+-- Modification de la table produits avec UUID comme identifiant
 CREATE TABLE produits (
-    id SERIAL PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),  -- Utilisation d'UUID au lieu de SERIAL
     nom VARCHAR(255) NOT NULL,
     prix DECIMAL(10,2) NOT NULL,
     stock INTEGER DEFAULT 0,
-    etat VARCHAR(50) NOT NULL, -- Pour "Très bon état", "Reconditionné", etc.
-    photos TEXT[], -- Pour stocker les URLs des images comme montré dans le formulaire
-    categorie_id INTEGER REFERENCES categories(id),
-    localisation VARCHAR(255), -- Pour "Paris 11ème" comme dans le formulaire
+    etat VARCHAR(50) NOT NULL CHECK (etat IN ('Très bon état', 'Reconditionné', 'Bon état', 'État correct')),
+    photos TEXT[], -- Pour stocker les URLs des images
+    categorie_id UUID REFERENCES categories(id) ON DELETE RESTRICT,
+    localisation VARCHAR(255) NOT NULL, -- Pour "Paris 11ème"
     description TEXT,
     nombre_vues INTEGER DEFAULT 0,
+    
+    -- Ajouts utiles par rapport à votre version
+    disponible BOOLEAN DEFAULT true,
+    marque VARCHAR(100),
+    modele VARCHAR(100),
+    
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Index pour améliorer les performances
+CREATE INDEX idx_produits_nom ON produits(nom);
+CREATE INDEX idx_produits_categorie ON produits(categorie_id);
+CREATE INDEX idx_produits_etat ON produits(etat);
+
+-- Trigger pour mettre à jour updated_at
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER update_produits_updated_at
+    BEFORE UPDATE ON produits
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
