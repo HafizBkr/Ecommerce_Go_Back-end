@@ -72,3 +72,10 @@ CREATE TRIGGER update_produits_updated_at
     BEFORE UPDATE ON produits
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TABLE event_categories (
+    id UUID PRIMARY KEY,
+    label VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
