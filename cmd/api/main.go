@@ -69,7 +69,6 @@ func main() {
 	googleAuthMiddleware := middlewares.GoogleAuthMiddleware
 	authMiddleware := middlewares.AuthMiddleware
 	AdminMiddleware := admin.AdminAuthMiddleware
-	// AdminMiddleware := admin.AdminAuthMiddleware
 	userRepo := repository.NewUserRepository(config.DB)
 	authHandler := googleauth.NewGoogleAuthHandler(userRepo)
 	adminRepo := admin.NewAdminRepository(config.DB)
@@ -97,15 +96,18 @@ func main() {
 		r.Post("/login", adminHandler.HandleAdminLogin)
 	})
 
-	//Route pour cree les categorie Uniquement pour l'admin
+	
 	r.Route("/categories", func(r chi.Router) {
-		r.Use(AdminMiddleware)
-		r.Post("/", categoryHandler.HandleCreateCategory)
-
+		r.Get("/", categoryHandler.HandleGetAllCategories) // Obtenir toutes les catégories
+		r.Get("/{id}", categoryHandler.HandleGetCategoryByID) // Obtenir une catégorie par ID
+	
+		r.With(AdminMiddleware).Route("/", func(r chi.Router) {
+			r.Post("/", categoryHandler.HandleCreateCategory) // Créer une catégorie
+			r.Put("/{id}", categoryHandler.HandleUpdateCategory) // Mettre à jour une catégorie
+			r.Delete("/{id}", categoryHandler.HandleDeleteCategory) // Supprimer une catégorie
+		})
 	})
-	r.Get("/catego", categoryHandler.HandleGetAllCategories)
-
-
+	
 	// Démarrage du serveur
 	server := http.Server{
 		Addr:         net.JoinHostPort("0.0.0.0", port),
