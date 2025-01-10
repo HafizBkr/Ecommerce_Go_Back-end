@@ -1,149 +1,157 @@
 package categories
 
 import (
-	"ecommerce-api/models"
-	"encoding/json"
-	"fmt"
-	"net/http"
-	"strconv"
-
-	"github.com/go-chi/chi"
+    "encoding/json"
+    "fmt"
+    "net/http"
+    "ecommerce-api/models"
+    "github.com/go-chi/chi/v5"
+    "github.com/google/uuid"
 )
 
-// CategoryHandler gère les requêtes HTTP relatives aux catégories.
 type CategoryHandler struct {
-	repo *CategoryRepository
+    repo *CategoryRepository
 }
 
-// NewCategoryHandler crée un nouveau handler pour les catégories.
 func NewCategoryHandler(repo *CategoryRepository) *CategoryHandler {
-	return &CategoryHandler{repo: repo}
+    return &CategoryHandler{repo: repo}
 }
 
-// HandleCreateCategory gère la création d'une catégorie.
+// HandleCreateCategory - Création d'une catégorie
 func (h *CategoryHandler) HandleCreateCategory(w http.ResponseWriter, r *http.Request) {
-	var category models.Category
-	// Décodage du corps de la requête en un objet Category
-	if err := json.NewDecoder(r.Body).Decode(&category); err != nil {
-		http.Error(w, "Requête invalide", http.StatusBadRequest)
-		return
-	}
-
-	// Appel au dépôt pour créer la catégorie
-	if err := h.repo.CreateCategory(category); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Retour de la réponse
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]string{
-		"message": "Catégorie créée avec succès",
-		"status":  "success",
-	})
-}
-
-// HandleUpdateCategory gère la mise à jour d'une catégorie.
-// HandleUpdateCategory gère la mise à jour d'une catégorie.
-func (h *CategoryHandler) HandleUpdateCategory(w http.ResponseWriter, r *http.Request) {
-    // Récupérer l'ID à partir du paramètre de la requête
-    idStr := r.URL.Query().Get("id")
-    if idStr == "" {
-        http.Error(w, "ID manquant", http.StatusBadRequest)
-        return
-    }
-
-    // Conversion de l'ID de la catégorie en entier
-    id, err := strconv.Atoi(idStr)
-    if err != nil {
-        http.Error(w, "ID de catégorie invalide", http.StatusBadRequest)
-        return
-    }
-
-    // Décodage du corps de la requête en un objet Category
     var category models.Category
     if err := json.NewDecoder(r.Body).Decode(&category); err != nil {
         http.Error(w, "Requête invalide", http.StatusBadRequest)
         return
     }
-
-    category.ID = id // Ajouter l'ID à la catégorie
-
-    // Appel au dépôt pour mettre à jour la catégorie
-    if err := h.repo.UpdateCategory(category); err != nil {
-        http.Error(w, fmt.Sprintf("Échec de la mise à jour de la catégorie : %v", err), http.StatusInternalServerError)
+    
+    if err := h.repo.CreateCategory(category); err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
         return
     }
+    
+    w.WriteHeader(http.StatusCreated)
+    json.NewEncoder(w).Encode(map[string]string{
+        "message": "Catégorie créée avec succès",
+        "status":  "success",
+    })
+}
 
-    // Retour de la réponse
+// HandleGetAllCategories - Liste toutes les catégories
+func (h *CategoryHandler) HandleGetAllCategories(w http.ResponseWriter, r *http.Request) {
+    categories, err := h.repo.GetAllCategories()
+    if err != nil {
+        http.Error(w, fmt.Sprintf("Échec de la récupération des catégories : %v", err), http.StatusInternalServerError)
+        return
+    }
+    
     w.Header().Set("Content-Type", "application/json")
-    w.WriteHeader(http.StatusOK)
+    json.NewEncoder(w).Encode(categories)
+}
+
+// HandleGetCategoryByID - Récupère une catégorie par ID
+func (h *CategoryHandler) HandleGetCategoryByID(w http.ResponseWriter, r *http.Request) {
+    // Extraction de l'ID
+    id := chi.URLParam(r, "id")
+    
+    // Debug logging
+    fmt.Printf("URL complète: %s\n", r.URL.Path)
+    fmt.Printf("ID extrait: %s\n", id)
+    
+    if id == "" {
+        http.Error(w, "ID non trouvé dans l'URL", http.StatusBadRequest)
+        return
+    }
+    
+    // Validation UUID
+    _, err := uuid.Parse(id)
+    if err != nil {
+        http.Error(w, "Format d'ID invalide", http.StatusBadRequest)
+        return
+    }
+    
+    category, err := h.repo.GetCategoryByID(id)
+    if err != nil {
+        http.Error(w, fmt.Sprintf("Catégorie non trouvée : %v", err), http.StatusNotFound)
+        return
+    }
+    
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(category)
+}
+
+// HandleUpdateCategory - Met à jour une catégorie
+func (h *CategoryHandler) HandleUpdateCategory(w http.ResponseWriter, r *http.Request) {
+    // Extraction de l'ID
+    id := chi.URLParam(r, "id")
+    
+    // Debug logging
+    fmt.Printf("URL complète: %s\n", r.URL.Path)
+    fmt.Printf("ID extrait: %s\n", id)
+    
+    if id == "" {
+        http.Error(w, "ID non trouvé dans l'URL", http.StatusBadRequest)
+        return
+    }
+    
+    // Validation UUID
+    _, err := uuid.Parse(id)
+    if err != nil {
+        http.Error(w, "Format d'ID invalide", http.StatusBadRequest)
+        return
+    }
+    
+    // Décodage du corps de la requête
+    var category models.Category
+    if err := json.NewDecoder(r.Body).Decode(&category); err != nil {
+        http.Error(w, "Requête invalide", http.StatusBadRequest)
+        return
+    }
+    
+    // Mise à jour de l'ID
+    category.ID = id
+    
+    if err := h.repo.UpdateCategory(category); err != nil {
+        http.Error(w, fmt.Sprintf("Échec de la mise à jour : %v", err), http.StatusInternalServerError)
+        return
+    }
+    
+    w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(map[string]string{
         "message": "Catégorie mise à jour avec succès",
         "status":  "success",
     })
 }
 
-// HandleDeleteCategory gère la suppression d'une catégorie.
+// HandleDeleteCategory - Supprime une catégorie
 func (h *CategoryHandler) HandleDeleteCategory(w http.ResponseWriter, r *http.Request) {
-    // Récupérer l'ID à partir du paramètre de la requête
-    idStr := r.URL.Query().Get("id")
-    if idStr == "" {
-        http.Error(w, "ID manquant", http.StatusBadRequest)
+    // Extraction de l'ID
+    id := chi.URLParam(r, "id")
+    
+    // Debug logging
+    fmt.Printf("URL complète: %s\n", r.URL.Path)
+    fmt.Printf("ID extrait: %s\n", id)
+    
+    if id == "" {
+        http.Error(w, "ID non trouvé dans l'URL", http.StatusBadRequest)
         return
     }
-
-    // Conversion de l'ID de la catégorie en entier
-    id, err := strconv.Atoi(idStr)
+    
+    // Validation UUID
+    _, err := uuid.Parse(id)
     if err != nil {
-        http.Error(w, "ID de catégorie invalide", http.StatusBadRequest)
+        http.Error(w, "Format d'ID invalide", http.StatusBadRequest)
         return
     }
-
-    // Appel au dépôt pour supprimer la catégorie
+    
     if err := h.repo.DeleteCategory(id); err != nil {
-        http.Error(w, fmt.Sprintf("Échec de la suppression de la catégorie : %v", err), http.StatusInternalServerError)
+        http.Error(w, fmt.Sprintf("Échec de la suppression : %v", err), http.StatusInternalServerError)
         return
     }
-
-    // Retour de la réponse
+    
+    w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(map[string]string{
         "message": "Catégorie supprimée avec succès",
         "status":  "success",
     })
-}
-
-
-// HandleGetCategory gère la récupération d'une catégorie par son ID.
-func (h *CategoryHandler) HandleGetCategory(w http.ResponseWriter, r *http.Request) {
-	idStr := chi.URLParam(r, "id")
-	// Conversion de l'ID de la catégorie en entier
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		http.Error(w, "ID de catégorie invalide", http.StatusBadRequest)
-		return
-	}
-
-	// Appel au dépôt pour récupérer la catégorie
-	category, err := h.repo.GetCategoryByID(id)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Échec de la récupération de la catégorie : %v", err), http.StatusNotFound)
-		return
-	}
-
-	// Retour de la catégorie en format JSON
-	json.NewEncoder(w).Encode(category)
-}
-
-// HandleGetAllCategories gère la récupération de toutes les catégories.
-func (h *CategoryHandler) HandleGetAllCategories(w http.ResponseWriter, r *http.Request) {
-	// Appel au dépôt pour récupérer toutes les catégories
-	categories, err := h.repo.GetAllCategories()
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Échec de la récupération des catégories : %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	// Retour des catégories en format JSON
-	json.NewEncoder(w).Encode(categories)
 }

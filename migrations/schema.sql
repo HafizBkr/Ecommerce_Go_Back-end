@@ -18,15 +18,17 @@ CREATE TABLE users (
     residence_country VARCHAR(100) -- Pays de résidence
 );
 
+-- Activer l'extension nécessaire pour générer des UUID
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
+-- Création de la table "categories"
 CREATE TABLE categories (
-    id SERIAL PRIMARY KEY,
-    nom VARCHAR(100) NOT NULL,
-    sous_categories TEXT[], -- Comme montré dans l'image 2
-    nombre_produits INTEGER DEFAULT 0,
-    statut VARCHAR(20) DEFAULT 'active',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(), -- Identifiant unique généré automatiquement
+    nom VARCHAR(255) NOT NULL,                    -- Nom de la catégorie
+    nombre_produits INT DEFAULT 0,                -- Nombre de produits dans la catégorie
+    statut VARCHAR(50) DEFAULT 'actif',           -- Statut de la catégorie (par ex. actif, inactif)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Date de création
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP -- Date de mise à jour
 );
 
 -- Table Produit
