@@ -6,6 +6,7 @@ import (
 	"ecommerce-api/config"
 	"ecommerce-api/googleauth"
 	middlewares "ecommerce-api/middleware"
+	"ecommerce-api/products"
 	"ecommerce-api/repository"
 	"log"
 	"net"
@@ -74,7 +75,10 @@ func main() {
 	adminRepo := admin.NewAdminRepository(config.DB)
 	adminHandler := admin.NewAdminHandler(adminRepo)
 	categoryRepo := categories.NewCategoryRepository(config.DB)
-	categoryHandler :=categories.NewCategoryHandler(categoryRepo)
+	categoryHandler := categories.NewCategoryHandler(categoryRepo)
+	productRepo := products.NewProductRepository(config.DB)
+	productHandler := products.NewProductHandler(productRepo)
+
 	// Appliquer le middleware sur l'endpoint "/complete-profile"
 	// Authentification Google - routes de callback
 	r.Get("/oauth-test", googleauth.HandleOAuthRedirect)
@@ -90,24 +94,32 @@ func main() {
 		r.Get("/", authHandler.GetUserHandler) // Lier le gestionnaire pour récupérer les infos de l'utilisateur
 	})
 	//Route pour gerer l'authnetification de l'admin
-	
+
 	r.Route("/admin", func(r chi.Router) {
 		r.Post("/register", adminHandler.HandleAdminRegister)
 		r.Post("/login", adminHandler.HandleAdminLogin)
 	})
 
-	
 	r.Route("/categories", func(r chi.Router) {
-		r.Get("/", categoryHandler.HandleGetAllCategories) // Obtenir toutes les catégories
+		r.Get("/", categoryHandler.HandleGetAllCategories)    // Obtenir toutes les catégories
 		r.Get("/{id}", categoryHandler.HandleGetCategoryByID) // Obtenir une catégorie par ID
-	
+
 		r.With(AdminMiddleware).Route("/", func(r chi.Router) {
-			r.Post("/", categoryHandler.HandleCreateCategory) // Créer une catégorie
-			r.Put("/{id}", categoryHandler.HandleUpdateCategory) // Mettre à jour une catégorie
+			r.Post("/", categoryHandler.HandleCreateCategory)       // Créer une catégorie
+			r.Put("/{id}", categoryHandler.HandleUpdateCategory)    // Mettre à jour une catégorie
 			r.Delete("/{id}", categoryHandler.HandleDeleteCategory) // Supprimer une catégorie
 		})
 	})
-	
+	r.Route("/products", func(r chi.Router) {
+		r.With(AdminMiddleware).Route("/", func(r chi.Router) {
+			r.Post("/", productHandler.HandleCreateProduct)
+			r.Delete("/{id}", productHandler.HandleDeleteProduct)
+			r.Put("/{id}", productHandler.HandleUpdateProduct)
+		})
+		r.Get("/{id}", productHandler.HandleGetProductByID)
+		r.Get("/", productHandler.HandleGetAllProducts)
+		r.Get("/by-category/{categoryID}", productHandler.HandleGetProductsByCategory)
+	})
 	// Démarrage du serveur
 	server := http.Server{
 		Addr:         net.JoinHostPort("0.0.0.0", port),
