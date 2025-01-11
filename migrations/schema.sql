@@ -79,3 +79,24 @@ CREATE TABLE event_categories (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE events (
+    id UUID PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    start_time TIME,
+    price DECIMAL(10, 2), -- Pour stocker le prix en CFA
+    event_type_id UUID REFERENCES event_categories(id),
+    available_seats INTEGER,
+    image_url VARCHAR(255),
+    latitude DECIMAL(10, 8),
+    longitude DECIMAL(11, 8),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Index pour améliorer les performances des recherches
+CREATE INDEX idx_events_date ON events(start_date);
+CREATE INDEX idx_events_type ON events(event_type_id);
