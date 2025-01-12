@@ -42,7 +42,8 @@ func HandleOAuthRedirect(w http.ResponseWriter, r *http.Request) {
 
 // HandleAuthCallback handles the callback from Google OAuth2
 // HandleAuthCallback handles the callback from Google OAuth2
-func HandleAuthCallback(w http.ResponseWriter, r *http.Request) {
+// Modifiez la signature pour en faire une méthode de GoogleAuthHandler
+func (h *GoogleAuthHandler) HandleAuthCallback(w http.ResponseWriter, r *http.Request) {
     code := r.URL.Query().Get("code")
     if code == "" {
         http.Error(w, "Authorization code is missing", http.StatusBadRequest)
@@ -86,6 +87,10 @@ func HandleAuthCallback(w http.ResponseWriter, r *http.Request) {
     googleID := claims["sub"].(string)
     profilePicture := claims["picture"].(string)
 
+    // Utiliser le repo du handler au lieu de créer un nouveau
+    _, err = h.repo.GetUserByGoogleID(googleID)
+    isNewUser := err != nil // true si l'utilisateur n'existe pas
+
     jwtToken, err := GenerateJWT(googleID, email)
     if err != nil {
         http.Error(w, "Failed to generate JWT token", http.StatusInternalServerError)
@@ -94,7 +99,7 @@ func HandleAuthCallback(w http.ResponseWriter, r *http.Request) {
 
     w.Header().Set("Content-Type", "application/json")
     w.WriteHeader(http.StatusOK)
-    json.NewEncoder(w).Encode(map[string]string{
+    json.NewEncoder(w).Encode(map[string]interface{}{
         "message":         "Authentication successful",
         "status":         "success",
         "email":          email,
@@ -103,9 +108,9 @@ func HandleAuthCallback(w http.ResponseWriter, r *http.Request) {
         "google_id":      googleID,
         "jwt_token":      jwtToken,
         "profile_picture": profilePicture,
+        "is_new_user":    isNewUser,
     })
 }
-
 // ValidateGoogleToken validates the ID token from Google
 func ValidateGoogleToken(ctx context.Context, token string) (map[string]interface{}, error) {
 	audience := os.Getenv("GOOGLE_OAUTH_CLIENT_ID")

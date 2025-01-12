@@ -85,18 +85,21 @@ func main() {
 	eventRepo:= events.NewEventRepository(config.DB)
 	eventHanlder := events.NewEventHandler(eventRepo)
 
+
+
+
 	// Appliquer le middleware sur l'endpoint "/complete-profile"
 	// Authentification Google - routes de callback
 	r.Get("/oauth-test", googleauth.HandleOAuthRedirect)
-	r.Get("/auth/callback", googleauth.HandleAuthCallback)
+	r.Get("/auth/callback", authHandler.HandleAuthCallback)
 	//Route pour completer le profile du user classique
 	r.Route("/complete-profile", func(r chi.Router) {
 		r.Use(googleAuthMiddleware)                    // Appliquer le middleware d'authentification
 		r.Post("/", authHandler.HandleCompleteProfile) // Associer la méthode POST à la fonction de gestion
 	})
-	//Route pour recuperer les info du user
+	//Route pour recuperer les info du user 
 	r.Route("/user/info", func(r chi.Router) {
-		r.Use(authMiddleware)                  // Appliquer le middleware d'authentification
+		r.Use(authMiddleware)                  // Appliquer le middleware d'authentification Pour le login du user
 		r.Get("/", authHandler.GetUserHandler) // Lier le gestionnaire pour récupérer les infos de l'utilisateur
 	})
 	//Route pour gerer l'authnetification de l'admin
