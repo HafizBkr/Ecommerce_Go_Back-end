@@ -185,3 +185,97 @@ func (r *ProductRepository) GetProductsByCategory(categoryID string) ([]models.P
     return products, nil
 }
 
+// products/repository.go
+func (r *ProductRepository) GetFilteredProducts(filters models.ProductFilters) ([]models.Product, error) {
+    query := `
+        SELECT id, nom, prix, stock, etat, photos, categorie_id,
+               localisation, description, nombre_vues, disponible,
+               marque, modele, created_at, updated_at
+        FROM produits
+        WHERE 1=1`
+    
+    var args []interface{}
+    argCount := 1
+
+    // Construction dynamique de la requête avec les filtres
+    if filters.PrixMin != nil {
+        query += fmt.Sprintf(" AND prix >= $%d", argCount)
+        args = append(args, *filters.PrixMin)
+        argCount++
+    }
+
+    if filters.PrixMax != nil {
+        query += fmt.Sprintf(" AND prix <= $%d", argCount)
+        args = append(args, *filters.PrixMax)
+        argCount++
+    }
+
+    if len(filters.Marque) > 0 {
+        query += fmt.Sprintf(" AND marque = ANY($%d)", argCount)
+        args = append(args, pq.Array(filters.Marque))
+        argCount++
+    }
+
+    if len(filters.Etat) > 0 {
+        query += fmt.Sprintf(" AND etat = ANY($%d)", argCount)
+        args = append(args, pq.Array(filters.Etat))
+        argCount++
+    }
+
+    if len(filters.Localisation) > 0 {
+        query += fmt.Sprintf(" AND localisation = ANY($%d)", argCount)
+        args = append(args, pq.Array(filters.Localisation))
+        argCount++
+    }
+
+    if filters.CategorieID != "" {
+        query += fmt.Sprintf(" AND categorie_id = $%d", argCount)
+        args = append(args, filters.CategorieID)
+        argCount++
+    }
+
+    if filters.Disponible != nil {
+        query += fmt.Sprintf(" AND disponible = $%d", argCount)
+        args = append(args, *filters.Disponible)
+        argCount++
+    }
+
+    if filters.SearchTerm != "" {
+        searchTerm := "%" + filters.SearchTerm + "%"
+        query += fmt.Sprintf(` AND (
+            nom ILIKE $%d OR 
+            description ILIKE $%d OR 
+            marque ILIKE $%d OR 
+            modele ILIKE $%d
+        )`, argCount, argCount, argCount, argCount)
+        args = append(args, searchTerm)
+        argCount++
+    }
+
+    // Exécution de la requête
+    rows, err := r.db.Query(query, args...)
+    if err != nil {
+        return nil, fmt.Errorf("erreur lors de la récupération des produits filtrés : %v", err)
+    }
+    defer rows.Close()
+
+    var products []models.Product
+    for rows.Next() {
+        var product models.Product
+        var photos []string
+        err := rows.Scan(
+            &product.ID, &product.Nom, &product.Prix, &product.Stock,
+            &product.Etat, pq.Array(&photos), &product.CategorieID,
+            &product.Localisation, &product.Description, &product.NombreVues,
+            &product.Disponible, &product.Marque, &product.Modele,
+            &product.CreatedAt, &product.UpdatedAt,
+        )
+        if err != nil {
+            return nil, fmt.Errorf("erreur lors du scan des produits : %v", err)
+        }
+        product.Photos = photos
+        products = append(products, product)
+    }
+
+    return products, nil
+}

@@ -128,6 +128,7 @@ func main() {
 		r.Get("/{id}", productHandler.HandleGetProductByID)
 		r.Get("/", productHandler.HandleGetAllProducts)
 		r.Get("/by-category/{categoryID}", productHandler.HandleGetProductsByCategory)
+		r.Get("/filter", productHandler.HandleFilterProducts)
 	})
 	r.Route("/event-categories", func(r chi.Router) {
 		r.With(AdminMiddleware).Route("/", func(r chi.Router) {
