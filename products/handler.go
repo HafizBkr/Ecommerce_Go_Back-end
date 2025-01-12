@@ -2,12 +2,15 @@
 package products
 
 import (
-    "encoding/json"
-    "fmt"
-    "net/http"
-    "ecommerce-api/models"
-    "github.com/go-chi/chi/v5"
-    "github.com/google/uuid"
+	"ecommerce-api/models"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"strconv"
+	"strings"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 )
 
 type ProductHandler struct {
@@ -156,6 +159,63 @@ func (h *ProductHandler) HandleGetProductsByCategory(w http.ResponseWriter, r *h
     products, err := h.repo.GetProductsByCategory(categoryID)
     if err != nil {
         http.Error(w, fmt.Sprintf("Erreur lors de la récupération des produits : %v", err), http.StatusInternalServerError)
+        return
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(products)
+}
+
+// products/handler.go
+func (h *ProductHandler) HandleFilterProducts(w http.ResponseWriter, r *http.Request) {
+    var filters models.ProductFilters
+
+    // Récupération des paramètres de l'URL
+    queryParams := r.URL.Query()
+    
+    // Prix min/max
+    if minPrice := queryParams.Get("prix_min"); minPrice != "" {
+        if price, err := strconv.ParseFloat(minPrice, 64); err == nil {
+            filters.PrixMin = &price
+        }
+    }
+    if maxPrice := queryParams.Get("prix_max"); maxPrice != "" {
+        if price, err := strconv.ParseFloat(maxPrice, 64); err == nil {
+            filters.PrixMax = &price
+        }
+    }
+
+    // Marques
+    if marques := queryParams.Get("marque"); marques != "" {
+        filters.Marque = strings.Split(marques, ",")
+    }
+
+    // États
+    if etats := queryParams.Get("etat"); etats != "" {
+        filters.Etat = strings.Split(etats, ",")
+    }
+
+    // Localisations
+    if locs := queryParams.Get("localisation"); locs != "" {
+        filters.Localisation = strings.Split(locs, ",")
+    }
+
+    // Catégorie
+    filters.CategorieID = queryParams.Get("categorie_id")
+
+    // Disponibilité
+    if dispo := queryParams.Get("disponible"); dispo != "" {
+        disponible := dispo == "true"
+        filters.Disponible = &disponible
+    }
+
+    // Terme de recherche
+    filters.SearchTerm = queryParams.Get("search")
+
+    // Récupération des produits filtrés
+    products, err := h.repo.GetFilteredProducts(filters)
+    if err != nil {
+        http.Error(w, fmt.Sprintf("Erreur lors du filtrage des produits : %v", err), http.StatusInternalServerError)
         return
     }
 
