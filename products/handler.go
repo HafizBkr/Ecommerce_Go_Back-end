@@ -222,3 +222,27 @@ func (h *ProductHandler) HandleFilterProducts(w http.ResponseWriter, r *http.Req
     w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(products)
 }
+
+
+func (h *ProductHandler) HandleSearchProducts(w http.ResponseWriter, r *http.Request) {
+    searchTerm := r.URL.Query().Get("q")
+    
+    if searchTerm == "" {
+        http.Error(w, "Terme de recherche manquant", http.StatusBadRequest)
+        return
+    }
+
+    if len(searchTerm) < 2 {
+        http.Error(w, "Le terme de recherche doit contenir au moins 2 caractères", http.StatusBadRequest)
+        return
+    }
+
+    products, err := h.repo.SearchProducts(searchTerm)
+    if err != nil {
+        http.Error(w, fmt.Sprintf("Erreur lors de la recherche : %v", err), http.StatusInternalServerError)
+        return
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(products)
+}

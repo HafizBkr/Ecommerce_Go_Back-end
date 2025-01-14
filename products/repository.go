@@ -279,3 +279,55 @@ func (r *ProductRepository) GetFilteredProducts(filters models.ProductFilters) (
 
     return products, nil
 }
+
+func (r *ProductRepository) SearchProducts(searchTerm string) ([]models.Product, error) {
+    query := `
+        SELECT id, nom, prix, stock, etat, photos, categorie_id,
+               localisation, description, nombre_vues, disponible,
+               marque, modele, created_at, updated_at
+        FROM produits
+        WHERE 
+            nom ILIKE $1 OR 
+            description ILIKE $1 OR 
+            marque ILIKE $1 OR 
+            modele ILIKE $1
+        ORDER BY 
+            CASE 
+                WHEN nom ILIKE $2 THEN 1
+                WHEN marque ILIKE $2 THEN 2
+                WHEN modele ILIKE $2 THEN 3
+                WHEN description ILIKE $2 THEN 4
+                ELSE 5
+            END,
+            nombre_vues DESC
+        LIMIT 20`
+
+    searchPattern := "%" + searchTerm + "%"
+    exactPattern := searchTerm
+
+    rows, err := r.db.Query(query, searchPattern, exactPattern)
+    if err != nil {
+        return nil, fmt.Errorf("erreur lors de la recherche des produits : %v", err)
+    }
+    defer rows.Close()
+
+    var products []models.Product
+    for rows.Next() {
+        var product models.Product
+        var photos []string
+        err := rows.Scan(
+            &product.ID, &product.Nom, &product.Prix, &product.Stock,
+            &product.Etat, pq.Array(&photos), &product.CategorieID,
+            &product.Localisation, &product.Description, &product.NombreVues,
+            &product.Disponible, &product.Marque, &product.Modele,
+            &product.CreatedAt, &product.UpdatedAt,
+        )
+        if err != nil {
+            return nil, fmt.Errorf("erreur lors du scan des produits : %v", err)
+        }
+        product.Photos = photos
+        products = append(products, product)
+    }
+
+    return products, nil
+}
