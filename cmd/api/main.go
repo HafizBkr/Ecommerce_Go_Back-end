@@ -8,6 +8,7 @@ import (
 	events_category "ecommerce-api/events_categories"
 	"ecommerce-api/googleauth"
 	middlewares "ecommerce-api/middleware"
+	"ecommerce-api/panier"
 	"ecommerce-api/products"
 	"ecommerce-api/repository"
 	"log"
@@ -84,6 +85,8 @@ func main() {
 	eventCategoriesHandler:=events_category.NewEventCategoryHandler(eventCategoriesRepo)
 	eventRepo:= events.NewEventRepository(config.DB)
 	eventHanlder := events.NewEventHandler(eventRepo)
+	panierRepo := panier.NewRepository(config.DB)
+    panierHandler := panier.NewPanierHandler(panierRepo)
 
 
 
@@ -150,6 +153,14 @@ func main() {
 		r.Get("/{id}", eventHanlder.HandleGetEventByID)
 		r.Get("/category/{id}", eventHanlder.HandleGetEventsByCategoryID)
 	})
+
+	r.Route("/liste-souhaits", func(r chi.Router) {
+		r.Use(authMiddleware) // Middleware d'authentification
+		r.Get("/", panierHandler.HandleAfficherPanier)
+		r.Post("/ajouter", panierHandler.HandleAjouterProduit)
+		r.Delete("/enlever", panierHandler.HandleEnleverDuPanier)
+	})
+	
 	// Démarrage du serveur
 	server := http.Server{
 		Addr:         net.JoinHostPort("0.0.0.0", port),
