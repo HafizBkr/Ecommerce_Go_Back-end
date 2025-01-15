@@ -100,3 +100,13 @@ CREATE TABLE events (
 -- Index pour améliorer les performances des recherches
 CREATE INDEX idx_events_date ON events(start_date);
 CREATE INDEX idx_events_type ON events(event_type_id);
+
+CREATE TABLE panier (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id CHARACTER VARYING(255) NOT NULL,
+    produit_id UUID NOT NULL,
+    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT panier_user_produit_key UNIQUE (user_id, produit_id),
+    CONSTRAINT panier_produit_id_fkey FOREIGN KEY (produit_id) REFERENCES produits(id)
+);
