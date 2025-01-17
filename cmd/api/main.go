@@ -1,6 +1,8 @@
 package main
 
 import (
+	"ecommerce-api/email"
+	"ecommerce-api/order"
 	"ecommerce-api/admin"
 	"ecommerce-api/categories"
 	"ecommerce-api/config"
@@ -38,6 +40,18 @@ func main() {
 	if DATABASE_URL == "" {
 		log.Fatal("La chaîne de connexion à la base de données est manquante.")
 	}
+
+
+	  
+
+		emailConfig := email.Config{
+			Host:      "smtp.gmail.com",  // ou votre serveur SMTP
+			Port:      "587",
+			Username:  "mongodb200@gmail.com",
+			Password:  "vshq dmbi skwa fnlz", // Utilisez un mot de passe d'application pour Gmail
+			FromName:  "Votre E-commerce",
+			FromEmail: "mongodb200@gmail.com",
+		}
 
 	// Initialisation de la base de données
 	config.InitDatabase(DATABASE_URL)
@@ -87,6 +101,11 @@ func main() {
 	eventHanlder := events.NewEventHandler(eventRepo)
 	panierRepo := panier.NewRepository(config.DB)
     panierHandler := panier.NewPanierHandler(panierRepo)
+
+	emailService:=email.NewEmailService(emailConfig)
+	commandeRepo:= order.NewRepository(config.DB)
+	CommandeHandler :=order.NewHandler(commandeRepo ,emailService)
+
 
 
 
@@ -159,6 +178,12 @@ func main() {
 		r.Get("/", panierHandler.HandleAfficherPanier)
 		r.Post("/ajouter", panierHandler.HandleAjouterProduit)
 		r.Delete("/enlever", panierHandler.HandleEnleverDuPanier)
+	})
+
+	r.Route("/commandes", func(r chi.Router) {
+		r.Use(authMiddleware)
+		r.Post("/", CommandeHandler.HandleCreerCommande)
+		r.Get("/", CommandeHandler.HandleListerCommandes)
 	})
 	
 	// Démarrage du serveur
