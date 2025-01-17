@@ -110,3 +110,25 @@ CREATE TABLE panier (
     CONSTRAINT panier_user_produit_key UNIQUE (user_id, produit_id),
     CONSTRAINT panier_produit_id_fkey FOREIGN KEY (produit_id) REFERENCES produits(id)
 );
+
+
+CREATE TABLE commandes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    numero_commande VARCHAR(50) UNIQUE NOT NULL,
+    user_id VARCHAR(255) NOT NULL,  -- user_id fait référence au googleid de la table users
+    montant_total DECIMAL(10,2) NOT NULL,
+    status VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users(email) ON DELETE CASCADE  -- Référence à users.email
+);
+
+CREATE TABLE commande_produits (
+    commande_id UUID NOT NULL,
+    produit_id UUID NOT NULL,
+    quantite INTEGER NOT NULL,
+    prix_unite DECIMAL(10,2) NOT NULL,
+    PRIMARY KEY (commande_id, produit_id),
+    CONSTRAINT fk_commande FOREIGN KEY (commande_id) REFERENCES commandes(id) ON DELETE CASCADE,
+    CONSTRAINT fk_produit FOREIGN KEY (produit_id) REFERENCES produits(id) ON DELETE CASCADE
+);
