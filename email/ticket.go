@@ -2,61 +2,41 @@
 package email
 
 import (
-    "bytes"
-    "ecommerce-api/models"
-    "fmt"
-    "html/template"
-    "net/smtp"
+	"ecommerce-api/models"
+	"fmt"
+	"net/smtp"
 )
 
-type Config struct {
-    Host     string
-    Port     string
-    Username string
-    Password string
-    FromName string
-    FromEmail string
-}
 
-type Service struct {
-    config Config
-}
 
-func NewEmailService(config Config) *Service {
-    return &Service{
-        config: config,
-    }
-}
-
-// EnvoyerEmailConfirmationCommande envoie un email de confirmation après une commande
-func (s *Service) EnvoyerEmailConfirmationCommande(commande *models.Commande, email string) error {
+func (s *Service) EnvoyerEmailConfirmationTicket(ticket *models.TicketOrder, email string) error {
     // Préparer le template HTML
-    htmlBody, err := s.renderTemplate(emailConfirmationTemplate, map[string]interface{}{
-        "NumeroCommande": commande.NumeroCommande,
-        "MontantTotal":   fmt.Sprintf("%.2f €", commande.MontantTotal),
-        "Date":           commande.CreatedAt.Format("02/01/2006 15:04"),
-        "Status":         commande.Status,
+    htmlBody, err := s.renderTemplate(emailConfirmationTicketTemplate, map[string]interface{}{
+        "NumeroCommande": ticket.NumeroCommande,
+        "EventTitle":     ticket.EventTitle,
+        "Quantity":       ticket.Quantity,
+        "MontantTotal":   fmt.Sprintf("%.2f CFA", ticket.PrixTotal),
+        "Date":           ticket.StartDate.Format("02/01/2006"),
+        "Heure":          ticket.StartTime,
+        "Status":         ticket.Status,
     })
     if err != nil {
         return fmt.Errorf("erreur lors du rendu du template: %v", err)
     }
 
-    // Configurer les en-têtes de l'email
     headers := make(map[string]string)
     headers["From"] = fmt.Sprintf("%s <%s>", s.config.FromName, s.config.FromEmail)
     headers["To"] = email
-    headers["Subject"] = fmt.Sprintf("Confirmation de votre commande %s", commande.NumeroCommande)
+    headers["Subject"] = fmt.Sprintf("Confirmation de vos tickets - %s", ticket.NumeroCommande)
     headers["MIME-Version"] = "1.0"
     headers["Content-Type"] = "text/html; charset=UTF-8"
 
-    // Construire le message
     message := ""
     for k, v := range headers {
         message += fmt.Sprintf("%s: %s\r\n", k, v)
     }
     message += "\r\n" + htmlBody
 
-    // Configurer l'authentification SMTP
     auth := smtp.PlainAuth(
         "",
         s.config.Username,
@@ -64,7 +44,6 @@ func (s *Service) EnvoyerEmailConfirmationCommande(commande *models.Commande, em
         s.config.Host,
     )
 
-    // Envoyer l'email
     err = smtp.SendMail(
         fmt.Sprintf("%s:%s", s.config.Host, s.config.Port),
         auth,
@@ -79,28 +58,12 @@ func (s *Service) EnvoyerEmailConfirmationCommande(commande *models.Commande, em
     return nil
 }
 
-// renderTemplate rend un template HTML avec les données fournies
-func (s *Service) renderTemplate(templateText string, data interface{}) (string, error) {
-    t, err := template.New("email").Parse(templateText)
-    if err != nil {
-        return "", err
-    }
-
-    var buf bytes.Buffer
-    if err := t.Execute(&buf, data); err != nil {
-        return "", err
-    }
-
-    return buf.String(), nil
-}
-
-// Template HTML pour l'email de confirmation
-const emailConfirmationTemplate = `
+const emailConfirmationTicketTemplate = `
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Confirmation de commande</title>
+    <title>Confirmation de tickets</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -141,29 +104,30 @@ const emailConfirmationTemplate = `
 </head>
 <body>
     <div class="header">
-        <h1>Confirmation de commande</h1>
+        <h1>Confirmation de vos tickets</h1>
     </div>
     
     <div class="content">
-        <p>Merci pour votre commande !</p>
+        <p>Merci pour votre réservation !</p>
         
         <div class="details">
-            <h3>Détails de votre commande :</h3>
+            <h3>Détails de votre réservation :</h3>
             <p><strong>Numéro de commande :</strong> {{.NumeroCommande}}</p>
+            <p><strong>Événement :</strong> {{.EventTitle}}</p>
+            <p><strong>Nombre de tickets :</strong> {{.Quantity}}</p>
             <p><strong>Montant total :</strong> {{.MontantTotal}}</p>
             <p><strong>Date :</strong> {{.Date}}</p>
+            <p><strong>Heure :</strong> {{.Heure}}</p>
             <p><strong>Statut :</strong> {{.Status}}</p>
         </div>
         
-        <p>Nous vous informerons par email lorsque votre commande sera expédiée.</p>
+        <p>Conservez précieusement ce mail, il servira de justificatif lors de l'événement.</p>
     </div>
     
     <div class="footer">
         <p>Cet email a été envoyé automatiquement, merci de ne pas y répondre.</p>
-        <p>© 2024 Votre E-commerce. Tous droits réservés.</p>
+        <p>© 2024 Événements Lomé. Tous droits réservés.</p>
     </div>
 </body>
 </html>
 `
-
-

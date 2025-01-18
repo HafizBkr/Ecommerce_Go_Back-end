@@ -23,4 +23,5 @@ type CommandeProduit struct {
 
 type EmailService interface {
     EnvoyerEmailConfirmationCommande(commande *Commande, email string) error
+    EnvoyerEmailConfirmationTicket(ticket *TicketOrder, email string) error
 }
