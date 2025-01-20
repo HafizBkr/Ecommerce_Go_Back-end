@@ -134,25 +134,19 @@ CREATE TABLE commande_produits (
 );
 
 
--- Création de la table ticket_orders
-CREATE TABLE ticket_orders (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    numero_commande VARCHAR(50) UNIQUE NOT NULL,
-    user_id VARCHAR(255) NOT NULL,  -- Référence à users.email comme dans la table commandes
-    event_id UUID NOT NULL,
-    event_title VARCHAR(255) NOT NULL,
-    start_date DATE NOT NULL,
-    start_time TIME NOT NULL,
-    quantity INTEGER NOT NULL,
-    prix_total DECIMAL(10,2) NOT NULL,
-    status VARCHAR(50) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+CREATE TABLE tickets (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),             
+    numero_ticket VARCHAR(50) UNIQUE NOT NULL,                  
+    user_id VARCHAR(255) NOT NULL,                                      
+    event_id UUID NOT NULL,                                  
+    quantity INTEGER NOT NULL,                            
+    price_total DECIMAL(10,2) NOT NULL,                        
+    status VARCHAR(50) NOT NULL,                                
+    start_date TIMESTAMP WITHOUT TIME ZONE,                    
+    start_time TIME,                                            
+    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP, 
+    updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP, 
     CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users(email) ON DELETE CASCADE,
     CONSTRAINT fk_event FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
-
 );
 
--- Index pour améliorer les performances
-CREATE INDEX idx_ticket_orders_user ON ticket_orders(user_id);
-CREATE INDEX idx_ticket_orders_event ON ticket_orders(event_id);

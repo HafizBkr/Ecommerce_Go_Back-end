@@ -183,8 +183,6 @@ func main() {
 	r.Route("/commandes", func(r chi.Router) {
 		r.Use(authMiddleware)
 		r.Post("/", CommandeHandler.HandleCreerCommande)
-		r.Post("/ticket",CommandeHandler.HandleCreerCommandeTicket)
-		r.Get("/", CommandeHandler.HandleListerCommandes)
 	})
 	
 	// Démarrage du serveur

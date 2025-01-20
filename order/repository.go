@@ -147,55 +147,8 @@ func (r *Repository) ListerCommandesParUtilisateur(userID string) ([]*models.Com
 }
 
 
-func (r *Repository) CreerCommandeTicket(userEmail, eventID string, quantity int) (*models.TicketOrder, error) {
-    // Générer un numéro unique pour la commande
-    numeroCommande := fmt.Sprintf("TICKET-%s-%s",
-        time.Now().Format("20060102"),
-        uuid.New().String()[:5])
 
-    // Récupérer les détails de l'événement
-    var eventDetails models.Event
-    err := r.db.Get(&eventDetails, `
-        SELECT id, title, start_date, start_time, price
-        FROM events
-        WHERE id = $1`, eventID)
-    if err != nil {
-        return nil, fmt.Errorf("erreur lors de la récupération des détails de l'événement : %v", err)
-    }
 
-    // Ignorer toute vérification de l'heure de début et récupérer la valeur telle quelle
-    // L'heure de début pourra être invalide, mais elle sera stockée dans la base de données
-    // sans modification.
 
-    // Calculer le prix total
-    montantTotal := float64(quantity) * eventDetails.Price
-
-    // Créer la structure pour la commande
-    ticketOrder := &models.TicketOrder{
-        ID:             uuid.New().String(),
-        NumeroCommande: numeroCommande,
-        UserID:         userEmail,  // Utilisation de l'email utilisateur
-        EventID:        eventID,
-        EventTitle:     eventDetails.Title,
-        StartDate:      eventDetails.StartDate,
-        StartTime:      eventDetails.StartTime, // L'heure de début, même invalide, est insérée directement
-        Quantity:       quantity,
-        PrixTotal:      montantTotal,
-        Status:         "en_attente",  // Statut initial de la commande
-        CreatedAt:      time.Now(),
-        UpdatedAt:      time.Now(),
-    }
-
-    // Insérer la commande dans la table `ticket_orders`
-    _, err = r.db.NamedExec(`
-        INSERT INTO ticket_orders (id, numero_commande, user_id, event_id, event_title, start_date, start_time, quantity, prix_total, status, created_at, updated_at)
-        VALUES (:id, :numero_commande, :user_id, :event_id, :event_title, :start_date, :start_time, :quantity, :prix_total, :status, :created_at, :updated_at)`,
-        ticketOrder)
-    if err != nil {
-        return nil, fmt.Errorf("erreur lors de l'insertion de la commande : %v", err)
-    }
-
-    return ticketOrder, nil
-}
 
 
