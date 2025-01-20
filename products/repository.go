@@ -50,11 +50,31 @@ func (r *ProductRepository) CreateProduct(product models.Product) error {
 func (r *ProductRepository) GetAllProducts() ([]models.Product, error) {
     var products []models.Product
     query := `
-        SELECT id, nom, prix, stock, etat, photos, categorie_id,
-               localisation, description, nombre_vues, disponible,
-               marque, modele, created_at, updated_at
-        FROM produits`
-    
+        SELECT
+            p.id,
+            p.nom,
+            p.prix,
+            p.stock,
+            p.etat,
+            p.photos,
+            p.categorie_id,
+            c.nom AS categorie_nom,  -- Récupérer le nom de la catégorie
+            p.localisation,
+            p.description,
+            p.nombre_vues,
+            p.disponible,
+            p.marque,
+            p.modele,
+            p.created_at,
+            p.updated_at
+        FROM
+            produits p
+        JOIN
+            categories c
+        ON
+            p.categorie_id = c.id
+    `
+
     rows, err := r.db.Query(query)
     if err != nil {
         return nil, fmt.Errorf("erreur lors de la récupération des produits : %v", err)
@@ -64,9 +84,12 @@ func (r *ProductRepository) GetAllProducts() ([]models.Product, error) {
     for rows.Next() {
         var product models.Product
         var photos []string
+        var categorieNom string
+
         err := rows.Scan(
             &product.ID, &product.Nom, &product.Prix, &product.Stock,
             &product.Etat, pq.Array(&photos), &product.CategorieID,
+            &categorieNom, // Récupérer le nom de la catégorie
             &product.Localisation, &product.Description, &product.NombreVues,
             &product.Disponible, &product.Marque, &product.Modele,
             &product.CreatedAt, &product.UpdatedAt,
@@ -75,6 +98,7 @@ func (r *ProductRepository) GetAllProducts() ([]models.Product, error) {
             return nil, fmt.Errorf("erreur lors du scan des produits : %v", err)
         }
         product.Photos = photos
+        product.CategorieNom = categorieNom // Stocker le nom de la catégorie dans le produit
         products = append(products, product)
     }
 
@@ -82,20 +106,45 @@ func (r *ProductRepository) GetAllProducts() ([]models.Product, error) {
 }
 
 
+
 func (r *ProductRepository) GetProductByID(id string) (*models.Product, error) {
     query := `
-        SELECT id, nom, prix, stock, etat, photos, categorie_id,
-               localisation, description, nombre_vues, disponible,
-               marque, modele, created_at, updated_at
-        FROM produits WHERE id = $1`
+        SELECT
+            p.id,
+            p.nom,
+            p.prix,
+            p.stock,
+            p.etat,
+            p.photos,
+            p.categorie_id,
+            c.nom AS categorie_nom,  -- Récupérer le nom de la catégorie
+            p.localisation,
+            p.description,
+            p.nombre_vues,
+            p.disponible,
+            p.marque,
+            p.modele,
+            p.created_at,
+            p.updated_at
+        FROM
+            produits p
+        JOIN
+            categories c
+        ON
+            p.categorie_id = c.id
+        WHERE
+            p.id = $1
+    `
 
     var product models.Product
     var photos []string
+    var categorieNom string
 
     row := r.db.QueryRow(query, id)
     err := row.Scan(
         &product.ID, &product.Nom, &product.Prix, &product.Stock,
         &product.Etat, pq.Array(&photos), &product.CategorieID,
+        &categorieNom, // Récupérer le nom de la catégorie
         &product.Localisation, &product.Description, &product.NombreVues,
         &product.Disponible, &product.Marque, &product.Modele,
         &product.CreatedAt, &product.UpdatedAt,
@@ -108,8 +157,10 @@ func (r *ProductRepository) GetProductByID(id string) (*models.Product, error) {
     }
 
     product.Photos = photos
+    product.CategorieNom = categorieNom // Stocker le nom de la catégorie dans le produit
     return &product, nil
 }
+
 
 
 func (r *ProductRepository) UpdateProduct(product models.Product) error {

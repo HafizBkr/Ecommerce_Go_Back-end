@@ -21,7 +21,10 @@ type CommandeProduit struct {
     PrixUnite  float64 `json:"prix_unite" db:"prix_unite"`
 }
 
+
+
 type EmailService interface {
     EnvoyerEmailConfirmationCommande(commande *Commande, email string) error
-    EnvoyerEmailConfirmationTicket(ticket *TicketOrder, email string) error
 }
+
+
