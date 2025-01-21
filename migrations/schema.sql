@@ -150,3 +150,13 @@ CREATE TABLE tickets (
     CONSTRAINT fk_event FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
 );
 
+-- Supprimer la contrainte existante
+ALTER TABLE panier
+DROP CONSTRAINT panier_produit_id_fkey;
+
+-- Ajouter une contrainte avec ON DELETE CASCADE
+ALTER TABLE panier
+ADD CONSTRAINT panier_produit_id_fkey
+FOREIGN KEY (produit_id)
+REFERENCES produits(id)
+ON DELETE CASCADE;

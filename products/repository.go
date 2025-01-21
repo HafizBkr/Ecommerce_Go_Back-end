@@ -199,11 +199,27 @@ func (r *ProductRepository) DeleteProduct(id string) error {
 func (r *ProductRepository) GetProductsByCategory(categoryID string) ([]models.Product, error) {
     var products []models.Product
     query := `
-        SELECT id, nom, prix, stock, etat, photos, categorie_id,
-               localisation, description, nombre_vues, disponible,
-               marque, modele, created_at, updated_at
-        FROM produits
-        WHERE categorie_id = $1`
+        SELECT 
+            p.id, 
+            p.nom, 
+            p.prix, 
+            p.stock, 
+            p.etat, 
+            p.photos, 
+            p.categorie_id, 
+            c.nom AS categorie_nom,  -- Récupérer le nom de la catégorie
+            p.localisation, 
+            p.description, 
+            p.nombre_vues, 
+            p.disponible, 
+            p.marque, 
+            p.modele, 
+            p.created_at, 
+            p.updated_at
+        FROM produits p
+        JOIN categories c
+        ON p.categorie_id = c.id
+        WHERE p.categorie_id = $1`
 
     rows, err := r.db.Query(query, categoryID)
     if err != nil {
@@ -217,6 +233,7 @@ func (r *ProductRepository) GetProductsByCategory(categoryID string) ([]models.P
         err := rows.Scan(
             &product.ID, &product.Nom, &product.Prix, &product.Stock,
             &product.Etat, pq.Array(&photos), &product.CategorieID,
+            &product.CategorieNom, // Stocker le nom de la catégorie ici
             &product.Localisation, &product.Description, &product.NombreVues,
             &product.Disponible, &product.Marque, &product.Modele,
             &product.CreatedAt, &product.UpdatedAt,
@@ -235,6 +252,7 @@ func (r *ProductRepository) GetProductsByCategory(categoryID string) ([]models.P
 
     return products, nil
 }
+
 
 // products/repository.go
 func (r *ProductRepository) GetFilteredProducts(filters models.ProductFilters) ([]models.Product, error) {
