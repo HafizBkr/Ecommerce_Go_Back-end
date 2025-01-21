@@ -163,28 +163,34 @@ func (r *ProductRepository) GetProductByID(id string) (*models.Product, error) {
 
 
 
-func (r *ProductRepository) UpdateProduct(product models.Product) error {
-    query := `
-        UPDATE produits 
-        SET nom = $1, prix = $2, stock = $3, etat = $4,
-            photos = $5, categorie_id = $6, localisation = $7,
-            description = $8, disponible = $9, marque = $10,
-            modele = $11, updated_at = $12
-        WHERE id = $13`
-    
-    _, err := r.db.Exec(
-        query,
-        product.Nom, product.Prix, product.Stock, product.Etat,
-        pq.Array(product.Photos), product.CategorieID, product.Localisation,
-        product.Description, product.Disponible, product.Marque,
-        product.Modele, time.Now(), product.ID,
-    )
-    
+func (r *ProductRepository) UpdateProduct(id string, updates map[string]interface{}) error {
+    // Initialiser la requête de base
+    query := `UPDATE produits SET `
+    params := []interface{}{}
+    i := 1
+
+    // Construire dynamiquement les champs à mettre à jour
+    for column, value := range updates {
+        if i > 1 {
+            query += ", "
+        }
+        query += fmt.Sprintf("%s = $%d", column, i)
+        params = append(params, value)
+        i++
+    }
+
+    // Ajouter la condition WHERE pour spécifier le produit
+    query += fmt.Sprintf(" WHERE id = $%d", i)
+    params = append(params, id)
+
+    // Exécuter la requête
+    _, err := r.db.Exec(query, params...)
     if err != nil {
         return fmt.Errorf("erreur lors de la mise à jour du produit : %v", err)
     }
     return nil
 }
+
 
 func (r *ProductRepository) DeleteProduct(id string) error {
     query := `DELETE FROM produits WHERE id = $1`
