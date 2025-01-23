@@ -182,6 +182,7 @@ func main() {
 
 	r.Route("/commandes", func(r chi.Router) {
 		r.Use(authMiddleware)
+		r.Get("/", CommandeHandler.HandleListerCommandes)
 		r.Post("/", CommandeHandler.HandleCreerCommande)
 	})
 	
