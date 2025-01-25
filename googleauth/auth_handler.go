@@ -43,6 +43,7 @@ func HandleOAuthRedirect(w http.ResponseWriter, r *http.Request) {
 // HandleAuthCallback handles the callback from Google OAuth2
 // HandleAuthCallback handles the callback from Google OAuth2
 // Modifiez la signature pour en faire une méthode de GoogleAuthHandler
+// HandleAuthCallback handles the callback from Google OAuth2
 func (h *GoogleAuthHandler) HandleAuthCallback(w http.ResponseWriter, r *http.Request) {
     code := r.URL.Query().Get("code")
     if code == "" {
@@ -56,7 +57,7 @@ func (h *GoogleAuthHandler) HandleAuthCallback(w http.ResponseWriter, r *http.Re
     config := oauth2.Config{
         ClientID:     clientID,
         ClientSecret: clientSecret,
-        RedirectURL:  "http://localhost:8080/auth/callback",
+        RedirectURL:  "http://localhost:8080/auth/callback", // Redirige vers le backend pour la callback
         Scopes:       []string{"openid", "email", "profile"},
         Endpoint:     google.Endpoint,
     }
@@ -73,8 +74,6 @@ func (h *GoogleAuthHandler) HandleAuthCallback(w http.ResponseWriter, r *http.Re
         return
     }
 
-    fmt.Println("ID Token:", idToken)
-
     claims, err := ValidateGoogleToken(context.Background(), idToken)
     if err != nil {
         http.Error(w, "Invalid ID token", http.StatusUnauthorized)
@@ -82,35 +81,34 @@ func (h *GoogleAuthHandler) HandleAuthCallback(w http.ResponseWriter, r *http.Re
     }
 
     email := claims["email"].(string)
-    name := claims["name"].(string)
-    firstName := claims["given_name"].(string)
     googleID := claims["sub"].(string)
-    profilePicture := claims["picture"].(string)
 
-    // Utiliser le repo du handler au lieu de créer un nouveau
+    // Vérifier si l'utilisateur existe déjà
     _, err = h.repo.GetUserByGoogleID(googleID)
-    isNewUser := err != nil // true si l'utilisateur n'existe pas
+    isNewUser := err != nil // Si err != nil, l'utilisateur est nouveau
 
-    jwtToken, err := GenerateJWT(googleID, email)
-    if err != nil {
-        http.Error(w, "Failed to generate JWT token", http.StatusInternalServerError)
-        return
+    var redirectURL string
+    if isNewUser {
+        // Rediriger vers le formulaire de complétion de profil sur le frontend
+        // Inclure le `id_token` pour une utilisation sur le frontend
+        redirectURL = fmt.Sprintf("http://localhost:3000/complete-profile?id_token=%s", idToken)
+    } else {
+        // Générer un JWT pour un utilisateur existant
+        jwtToken, err := GenerateJWT(googleID, email)
+        if err != nil {
+            http.Error(w, "Failed to generate JWT token", http.StatusInternalServerError)
+            return
+        }
+
+        // Rediriger l'utilisateur connecté vers son tableau de bord
+        redirectURL = fmt.Sprintf("http://localhost:3000/profile?jwt_token=%s", jwtToken)
     }
 
-    w.Header().Set("Content-Type", "application/json")
-    w.WriteHeader(http.StatusOK)
-    json.NewEncoder(w).Encode(map[string]interface{}{
-        "message":         "Authentication successful",
-        "status":         "success",
-        "email":          email,
-        "name":           name,
-        "first_name":     firstName,
-        "google_id":      googleID,
-        "jwt_token":      jwtToken,
-        "profile_picture": profilePicture,
-        "is_new_user":    isNewUser,
-    })
+    // Effectuer la redirection
+    http.Redirect(w, r, redirectURL, http.StatusFound)
 }
+
+
 // ValidateGoogleToken validates the ID token from Google
 func ValidateGoogleToken(ctx context.Context, token string) (map[string]interface{}, error) {
 	audience := os.Getenv("GOOGLE_OAUTH_CLIENT_ID")
