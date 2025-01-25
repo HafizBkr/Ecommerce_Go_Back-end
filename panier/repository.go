@@ -72,29 +72,29 @@ func (r *Repository) ObtenirPanierParUserID(userID string) ([]*models.ProduitSou
 
 
 func (r *Repository) EnleverDuPanier(userID, produitID string) error {
-    // Exécution de la requête de suppression
+    log.Printf("Attempting to remove product %s from cart of user %s", produitID, userID)
+
     result, err := r.db.Exec(`
         DELETE FROM panier
         WHERE user_id = $1 AND produit_id = $2`,
         userID, produitID)
 
     if err != nil {
-        log.Printf("Error executing delete query: %v", err)
+        log.Printf("Database error removing product: %v", err)
         return err
     }
 
-    // Vérification si une ligne a été supprimée
     rowsAffected, err := result.RowsAffected()
     if err != nil {
-        log.Printf("Error getting rows affected: %v", err)
+        log.Printf("Error checking rows affected: %v", err)
         return err
     }
 
     if rowsAffected == 0 {
-        return fmt.Errorf("aucun produit trouvé dans le panier pour l'utilisateur %s", userID)
+        log.Printf("No product found in cart for user %s with product ID %s", userID, produitID)
+        return fmt.Errorf("no product found in cart")
     }
 
+    log.Printf("Successfully removed product %s from user's cart", produitID)
     return nil
 }
-
-
