@@ -173,7 +173,7 @@ func main() {
 		r.Get("/category/{id}", eventHanlder.HandleGetEventsByCategoryID)
 	})
 
-	r.Route("/liste-souhaits", func(r chi.Router) {
+	r.Route("/panier", func(r chi.Router) {
 		r.Use(authMiddleware) // Middleware d'authentification
 		r.Get("/", panierHandler.HandleAfficherPanier)
 		r.Post("/ajouter", panierHandler.HandleAjouterProduit)
