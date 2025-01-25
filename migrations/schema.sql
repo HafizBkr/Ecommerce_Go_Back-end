@@ -161,7 +161,6 @@ FOREIGN KEY (produit_id)
 REFERENCES produits(id)
 ON DELETE CASCADE;
 
-
 ALTER TABLE events
     ALTER COLUMN start_date TYPE character varying(255),
     ALTER COLUMN end_date TYPE character varying(255);
