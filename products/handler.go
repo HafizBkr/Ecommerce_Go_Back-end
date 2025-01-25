@@ -76,51 +76,42 @@ func (h *ProductHandler) HandleGetProductByID(w http.ResponseWriter, r *http.Req
 
 func (h *ProductHandler) HandleUpdateProduct(w http.ResponseWriter, r *http.Request) {
     id := chi.URLParam(r, "id")
-    
+
     if id == "" {
         http.Error(w, "ID non trouvé dans l'URL", http.StatusBadRequest)
         return
     }
-    
+
     if _, err := uuid.Parse(id); err != nil {
         http.Error(w, "Format d'ID invalide", http.StatusBadRequest)
         return
     }
-    
-    existingProduct, err := h.repo.GetProductByID(id)
-    if err != nil {
-        http.Error(w, fmt.Sprintf("Produit non trouvé: %v", err), http.StatusNotFound)
-        return
-    }
-    
-    var updatedProduct models.Product
-    if err := json.NewDecoder(r.Body).Decode(&updatedProduct); err != nil {
+
+    // Décoder le JSON dans une map
+    updates := make(map[string]interface{})
+    if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
         http.Error(w, "Requête invalide", http.StatusBadRequest)
         return
     }
-    
-    updatedProduct.ID = id
-    
-    // Conserver les valeurs existantes si non fournies
-    if updatedProduct.Nom == "" {
-        updatedProduct.Nom = existingProduct.Nom
+
+    if len(updates) == 0 {
+        http.Error(w, "Aucune donnée fournie pour la mise à jour", http.StatusBadRequest)
+        return
     }
-    if updatedProduct.Prix == 0 {
-        updatedProduct.Prix = existingProduct.Prix
-    }
-    // ... et ainsi de suite pour les autres champs
-    
-    if err := h.repo.UpdateProduct(updatedProduct); err != nil {
+
+    // Mettre à jour le produit dans la base de données
+    if err := h.repo.UpdateProduct(id, updates); err != nil {
         http.Error(w, fmt.Sprintf("Échec de la mise à jour : %v", err), http.StatusInternalServerError)
         return
     }
-    
+
     w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(map[string]string{
         "message": "Produit mis à jour avec succès",
         "status":  "success",
     })
 }
+
 
 func (h *ProductHandler) HandleDeleteProduct(w http.ResponseWriter, r *http.Request) {
     id := chi.URLParam(r, "id")

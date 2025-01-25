@@ -11,6 +11,7 @@ type Product struct {
     Etat        string    `db:"etat" json:"etat"`
     Photos      []string  `db:"photos" json:"photos"`
     CategorieID string    `db:"categorie_id" json:"categorie_id"`
+    CategorieNom  string    `json:"categorie_nom"`
     Localisation string   `db:"localisation" json:"localisation"`
     Description string    `db:"description" json:"description"`
     NombreVues  int       `db:"nombre_vues" json:"nombre_vues"`

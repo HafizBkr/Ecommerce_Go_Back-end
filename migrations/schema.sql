@@ -132,3 +132,37 @@ CREATE TABLE commande_produits (
     CONSTRAINT fk_commande FOREIGN KEY (commande_id) REFERENCES commandes(id) ON DELETE CASCADE,
     CONSTRAINT fk_produit FOREIGN KEY (produit_id) REFERENCES produits(id) ON DELETE CASCADE
 );
+
+
+CREATE TABLE tickets (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),             
+    numero_ticket VARCHAR(50) UNIQUE NOT NULL,                  
+    user_id VARCHAR(255) NOT NULL,                                      
+    event_id UUID NOT NULL,                                  
+    quantity INTEGER NOT NULL,                            
+    price_total DECIMAL(10,2) NOT NULL,                        
+    status VARCHAR(50) NOT NULL,                                
+    start_date TIMESTAMP WITHOUT TIME ZONE,                    
+    start_time TIME,                                            
+    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP, 
+    updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP, 
+    CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users(email) ON DELETE CASCADE,
+    CONSTRAINT fk_event FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
+);
+
+-- Supprimer la contrainte existante
+ALTER TABLE panier
+DROP CONSTRAINT panier_produit_id_fkey;
+
+-- Ajouter une contrainte avec ON DELETE CASCADE
+ALTER TABLE panier
+ADD CONSTRAINT panier_produit_id_fkey
+FOREIGN KEY (produit_id)
+REFERENCES produits(id)
+ON DELETE CASCADE;
+
+ALTER TABLE events
+    ALTER COLUMN start_date TYPE character varying(255),
+    ALTER COLUMN end_date TYPE character varying(255);
+ALTER TABLE events
+    ALTER COLUMN start_time TYPE character varying(255);
