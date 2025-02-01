@@ -77,10 +77,12 @@ func (h *Handler) HandleCreerCommande(w http.ResponseWriter, r *http.Request) {
     json.NewEncoder(w).Encode(map[string]interface{}{
         "status":  "success",
         "message": "Commande créée avec succès",
-        "data":    commande,
+        "data": map[string]interface{}{
+            "commande": commande,
+            "produits": commande.Produits, // Inclure les détails des produits
+        },
     })
 }
-
 // HandleListerCommandes gère la récupération de toutes les commandes d'un utilisateur.
 func (h *Handler) HandleListerCommandes(w http.ResponseWriter, r *http.Request) {
     authHeader := r.Header.Get("Authorization")
