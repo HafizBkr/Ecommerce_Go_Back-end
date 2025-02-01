@@ -1,4 +1,3 @@
-// email/service.go
 package email
 
 import (
@@ -10,11 +9,11 @@ import (
 )
 
 type Config struct {
-    Host     string
-    Port     string
-    Username string
-    Password string
-    FromName string
+    Host      string
+    Port      string
+    Username  string
+    Password  string
+    FromName  string
     FromEmail string
 }
 
@@ -28,14 +27,21 @@ func NewEmailService(config Config) *Service {
     }
 }
 
-// EnvoyerEmailConfirmationCommande envoie un email de confirmation après une commande
 func (s *Service) EnvoyerEmailConfirmationCommande(commande *models.Commande, email string) error {
-    // Préparer le template HTML
-    htmlBody, err := s.renderTemplate(emailConfirmationTemplate, map[string]interface{}{
+    // Définir les fonctions du template
+    funcMap := template.FuncMap{
+        "mult": func(prix float64, quantite int) float64 {
+            return prix * float64(quantite)
+        },
+    }
+
+    // Créer le template avec les fonctions personnalisées
+    htmlBody, err := s.renderTemplateWithFuncs(emailConfirmationTemplate, funcMap, map[string]interface{}{
         "NumeroCommande": commande.NumeroCommande,
         "MontantTotal":   fmt.Sprintf("%.2f €", commande.MontantTotal),
         "Date":           commande.CreatedAt.Format("02/01/2006 15:04"),
         "Status":         commande.Status,
+        "Produits":       commande.Produits,
     })
     if err != nil {
         return fmt.Errorf("erreur lors du rendu du template: %v", err)
@@ -79,9 +85,8 @@ func (s *Service) EnvoyerEmailConfirmationCommande(commande *models.Commande, em
     return nil
 }
 
-// renderTemplate rend un template HTML avec les données fournies
-func (s *Service) renderTemplate(templateText string, data interface{}) (string, error) {
-    t, err := template.New("email").Parse(templateText)
+func (s *Service) renderTemplateWithFuncs(templateText string, funcMap template.FuncMap, data interface{}) (string, error) {
+    t, err := template.New("email").Funcs(funcMap).Parse(templateText)
     if err != nil {
         return "", err
     }
@@ -93,7 +98,6 @@ func (s *Service) renderTemplate(templateText string, data interface{}) (string,
 
     return buf.String(), nil
 }
-
 // Template HTML pour l'email de confirmation
 const emailConfirmationTemplate = `
 <!DOCTYPE html>
@@ -137,6 +141,19 @@ const emailConfirmationTemplate = `
             border-radius: 5px;
             border: 1px solid #ddd;
         }
+        .produits-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .produits-table th, .produits-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        .produits-table th {
+            background-color: #f2f2f2;
+        }
     </style>
 </head>
 <body>
@@ -154,6 +171,28 @@ const emailConfirmationTemplate = `
             <p><strong>Date :</strong> {{.Date}}</p>
             <p><strong>Statut :</strong> {{.Status}}</p>
         </div>
+
+        <h3>Produits commandés :</h3>
+        <table class="produits-table">
+            <thead>
+                <tr>
+                    <th>Produit</th>
+                    <th>Prix unitaire</th>
+                    <th>Quantité</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{range .Produits}}
+                <tr>
+            <td>{{.Nom}}</td>
+            <td>{{printf "%.2f €" .PrixUnite}}</td>
+            <td>{{.Quantite}}</td>
+            <td>{{printf "%.2f €" (mult .PrixUnite .Quantite)}}</td>
+        </tr>
+                {{end}}
+            </tbody>
+        </table>
         
         <p>Nous vous informerons par email lorsque votre commande sera expédiée.</p>
     </div>
@@ -163,7 +202,4 @@ const emailConfirmationTemplate = `
         <p>© 2024 Votre E-commerce. Tous droits réservés.</p>
     </div>
 </body>
-</html>
-`
-
-
+</html>`

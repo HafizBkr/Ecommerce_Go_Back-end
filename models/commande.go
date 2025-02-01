@@ -4,14 +4,21 @@ import (
     "time"
 )
 
+type ProduitDetail struct {
+    Nom       string  `json:"nom" db:"nom"`
+    PrixUnite float64 `json:"prix_unite" db:"prix_unite"`
+    Quantite  int     `json:"quantite" db:"quantite"`
+}
+
 type Commande struct {
-    ID            string    `json:"id" db:"id"`
-    NumeroCommande string    `json:"numero_commande" db:"numero_commande"`
-    UserID        string    `json:"user_id" db:"user_id"`
-    MontantTotal  float64   `json:"montant_total" db:"montant_total"`
-    Status        string    `json:"status" db:"status"`
-    CreatedAt     time.Time `json:"created_at" db:"created_at"`
-    UpdatedAt     time.Time `json:"updated_at" db:"updated_at"`
+    ID             string          `json:"id" db:"id"`
+    NumeroCommande string          `json:"numero_commande" db:"numero_commande"`
+    UserID         string          `json:"user_id" db:"user_id"`
+    MontantTotal   float64         `json:"montant_total" db:"montant_total"`
+    Status         string          `json:"status" db:"status"`
+    CreatedAt      time.Time       `json:"created_at" db:"created_at"`
+    UpdatedAt      time.Time       `json:"updated_at" db:"updated_at"`
+    Produits       []ProduitDetail `json:"produits" db:"-"` // Le "-" indique d'ignorer ce champ pour la BD
 }
 
 type CommandeProduit struct {
@@ -20,7 +27,6 @@ type CommandeProduit struct {
     Quantite   int     `json:"quantite" db:"quantite"`
     PrixUnite  float64 `json:"prix_unite" db:"prix_unite"`
 }
-
 
 
 type EmailService interface {
