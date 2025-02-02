@@ -110,6 +110,12 @@ func (h *Handler) HandleListerCommandes(w http.ResponseWriter, r *http.Request) 
         return
     }
 
+    if len(commandes) == 0 {
+        w.WriteHeader(http.StatusNotFound)
+        json.NewEncoder(w).Encode(map[string]string{"message": "Aucune commande trouvée"})
+        return
+    }
+
     w.Header().Set("Content-Type", "application/json")
     w.WriteHeader(http.StatusOK)
     json.NewEncoder(w).Encode(map[string]interface{}{
@@ -117,3 +123,4 @@ func (h *Handler) HandleListerCommandes(w http.ResponseWriter, r *http.Request) 
         "data":    commandes,
     })
 }
+
