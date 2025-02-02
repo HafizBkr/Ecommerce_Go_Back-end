@@ -4,11 +4,14 @@ package order
 import (
 	"database/sql"
 	"ecommerce-api/models"
+	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 )
 
 type Repository struct {
@@ -159,42 +162,115 @@ func (r *Repository) GetCommandesByUser(userID string) ([]*models.Commande, erro
     return commandes, nil
 }
 // ListerCommandesParUtilisateur récupère toutes les commandes passées par un utilisateur spécifique.
+// Dans repository.go
 func (r *Repository) ListerCommandesParUtilisateur(userID string) ([]*models.Commande, error) {
     const query = `
-        SELECT c.id, c.user_id, c.montant_total, c.status, c.created_at
+        SELECT 
+            c.id AS commande_id, 
+            c.numero_commande,
+            c.user_id, 
+            c.montant_total, 
+            c.status, 
+            c.created_at,
+            c.updated_at,
+            p.nom AS produit_nom,
+            p.marque AS produit_marque,
+            p.modele AS produit_modele,
+            cp.prix_unite AS produit_prix,
+            cp.quantite AS produit_quantite,
+            p.etat AS produit_etat,
+            p.localisation AS produit_localisation,
+            p.photos AS produit_photos
         FROM commandes c
+        LEFT JOIN commande_produits cp ON cp.commande_id = c.id
+        LEFT JOIN produits p ON p.id = cp.produit_id
         WHERE c.user_id = $1
         ORDER BY c.created_at DESC
     `
+
     rows, err := r.db.Query(query, userID)
     if err != nil {
         return nil, fmt.Errorf("erreur lors de la récupération des commandes: %w", err)
     }
     defer rows.Close()
 
-    var commandes []*models.Commande
+    commandesMap := make(map[string]*models.Commande)
     for rows.Next() {
-        commande := &models.Commande{}
-        if err := rows.Scan(
-            &commande.ID,
-            &commande.UserID,
-            &commande.MontantTotal,
-            &commande.Status,
-            &commande.CreatedAt,
-        ); err != nil {
-            return nil, fmt.Errorf("erreur lors de la lecture des données: %w", err)
+        var (
+            commandeID   string
+            numeroCommande string
+            montantTotal float64
+            status       string
+            createdAt    time.Time
+            updatedAt    time.Time
+            produitNom   sql.NullString
+            produitMarque sql.NullString
+            produitModele sql.NullString
+            produitPrix  sql.NullFloat64
+            produitQuantite sql.NullInt64
+            produitEtat  sql.NullString
+            produitLocalisation sql.NullString
+            produitPhotos sql.NullString
+        )
+
+        err := rows.Scan(
+            &commandeID, &numeroCommande, &userID, &montantTotal, &status, &createdAt, &updatedAt,
+            &produitNom, &produitMarque, &produitModele, &produitPrix, &produitQuantite, 
+            &produitEtat, &produitLocalisation, &produitPhotos,
+        )
+        if err != nil {
+            return nil, fmt.Errorf("erreur lors du scan des commandes: %w", err)
         }
-        commandes = append(commandes, commande)
+
+        if _, exists := commandesMap[commandeID]; !exists {
+            commandesMap[commandeID] = &models.Commande{
+                ID:             commandeID,
+                NumeroCommande: numeroCommande,
+                UserID:         userID,
+                MontantTotal:   montantTotal,
+                Status:         status,
+                CreatedAt:      createdAt,
+                UpdatedAt:      updatedAt,
+                Produits:       []models.ProduitDetail{},
+            }
+        }
+
+        if produitPhotos.Valid {
+            var raw string = produitPhotos.String
+            if !strings.HasPrefix(raw, "[") { // Vérifie si ce n'est pas un tableau JSON
+                raw = fmt.Sprintf(`["%s"]`, strings.Join(strings.Split(raw, ", "), `","`))
+            }
+            var photos pq.StringArray
+            err := json.Unmarshal([]byte(raw), &photos)
+            if err != nil {
+                return nil, fmt.Errorf("erreur lors de la conversion des photos pour le produit %s: %w", produitNom.String, err)
+            }
+        
+        
+
+            commandesMap[commandeID].Produits = append(commandesMap[commandeID].Produits, models.ProduitDetail{
+                Nom:         produitNom.String,
+                Model:       produitModele.String,
+                PrixUnite:   produitPrix.Float64,
+                Quantite:    int(produitQuantite.Int64),
+                Etat:        produitEtat.String,
+                Localisation: produitLocalisation.String,
+                Photos:      photos,
+            })
+        }
     }
 
-    if err = rows.Err(); err != nil {
-        return nil, fmt.Errorf("erreur lors de l'itération des lignes: %w", err)
+    if err := rows.Err(); err != nil {
+        return nil, fmt.Errorf("erreur lors de l'itération des commandes: %w", err)
+    }
+
+    commandes := make([]*models.Commande, 0, len(commandesMap))
+    for _, commande := range commandesMap {
+        commandes = append(commandes, commande)
     }
 
     return commandes, nil
 }
-
-
 
 
 

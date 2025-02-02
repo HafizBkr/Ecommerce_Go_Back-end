@@ -8,6 +8,10 @@ type ProduitDetail struct {
     Nom       string  `json:"nom" db:"nom"`
     PrixUnite float64 `json:"prix_unite" db:"prix_unite"`
     Quantite  int     `json:"quantite" db:"quantite"`
+    Model     string  `json:"model" db:"model"`         // Ajout du modèle
+    Etat         string  `json:"etat" db:"etat"`
+    Localisation string  `json:"localisation" db:"localisation"`
+    Photos       []string `json:"photos" db:"photos"`
 }
 
 type Commande struct {
