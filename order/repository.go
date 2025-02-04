@@ -273,6 +273,30 @@ func (r *Repository) ListerCommandesParUtilisateur(userID string) ([]*models.Com
 }
 
 
+func (r *Repository) ListerToutesCommandes() ([]*models.CommandeDetail, error) {
+    var commandes []*models.CommandeDetail
 
+    query := `
+        SELECT 
+            c.id, 
+            c.numero_commande, 
+            u.google_id, 
+            u.first_name, 
+            u.last_name, 
+            u.email, 
+            c.montant_total, 
+            c.status, 
+            c.created_at, 
+            c.updated_at
+        FROM commandes c
+        JOIN users u ON c.user_id = u.google_id  -- Jointure sur google_id
+        ORDER BY c.created_at DESC`
 
+    err := r.db.Select(&commandes, query)
+    if err != nil {
+        return nil, fmt.Errorf("erreur lors de la récupération des commandes : %w", err)
+    }
+
+    return commandes, nil
+}
 

@@ -124,3 +124,20 @@ func (h *Handler) HandleListerCommandes(w http.ResponseWriter, r *http.Request) 
     })
 }
 
+func (h *Handler) HandleListerToutesCommandes(w http.ResponseWriter, r *http.Request) {
+    commandes, err := h.repo.ListerToutesCommandes()
+    if err != nil {
+        http.Error(w, fmt.Sprintf("Échec de la récupération des commandes : %v", err), http.StatusInternalServerError)
+        return
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    w.WriteHeader(http.StatusOK)
+
+    if err := json.NewEncoder(w).Encode(map[string]interface{}{
+        "status": "success",
+        "data":   commandes,
+    }); err != nil {
+        http.Error(w, "Erreur lors de l'encodage de la réponse", http.StatusInternalServerError)
+    }
+}

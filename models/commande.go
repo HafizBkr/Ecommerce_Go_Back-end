@@ -37,4 +37,16 @@ type EmailService interface {
     EnvoyerEmailConfirmationCommande(commande *Commande, email string) error
 }
 
+type CommandeDetail struct {
+    ID             string    `db:"id" json:"id"`
+    NumeroCommande string    `db:"numero_commande" json:"numero_commande"`
+    GoogleID       string    `db:"google_id" json:"google_id"`
+    FirstName      string    `db:"first_name" json:"first_name"`
+    LastName       string    `db:"last_name" json:"last_name"`
+    Email          string    `db:"email" json:"email"`
+    MontantTotal   float64   `db:"montant_total" json:"montant_total"`
+    Status         string    `db:"status" json:"status"`
+    CreatedAt      time.Time `db:"created_at" json:"created_at"`
+    UpdatedAt      time.Time `db:"updated_at" json:"updated_at"`
+}
 

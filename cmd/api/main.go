@@ -185,6 +185,13 @@ func main() {
 		r.Get("/", CommandeHandler.HandleListerCommandes)
 		r.Post("/", CommandeHandler.HandleCreerCommande)
 	})
+
+	r.Route("/ordres", func(r chi.Router) {
+		r.Use(AdminMiddleware)
+		r.Get("/all", CommandeHandler.HandleListerToutesCommandes)
+	})
+
+	
 	
 	// Démarrage du serveur
 	server := http.Server{
