@@ -84,10 +84,8 @@ Ce projet expose une API RESTful. La documentation des endpoints est disponible 
 3. Faire un commit et un push
 4. Créer une pull request
 
-## License
-Ce projet est sous licence **MIT**.
 
 ---
 Auteur : **Boukari Hafiz**
 
->>>>>>> e17b96c (commit for the ecomerce project)
+
