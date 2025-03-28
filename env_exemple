@@ -1,0 +1,17 @@
+# .env
+# Server
+PORT=8080
+
+# Database
+DNS_LINK=postgres://postgres:hafiz@localhost:5432/test_ecomerce?sslmode=disable
+
+
+# JWT
+JWT_SECRET=HELLOJNFKJSVEOV EWEJBFVIUWEHFVIHE
+JWT_EXPIRATION=24h
+
+# Google OAuth
+GOOGLE_OAUTH_CLIENT_ID=
+GOOGLE_OAUTH_CLIENT_SECRET=
+GOOGLE_REDIRECT_URL=http://localhost:8080/auth/callback
+
