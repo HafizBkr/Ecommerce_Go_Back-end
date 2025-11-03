@@ -110,7 +110,7 @@ func main() {
 
 
 
-	// Appliquer le middleware sur l'endpoint "/complete-profile"
+
 	// Authentification Google - routes de callback
 	r.Get("/oauth-test", googleauth.HandleOAuthRedirect)
 	r.Get("/auth/callback", authHandler.HandleAuthCallback)
